@@ -551,6 +551,7 @@ intensity:</textarea>
       white: ["#fffaf0", "#e8edf7", "#ffffff"], black: ["#111116", "#202027", "#08080c"],
       copper: ["#b76838", "#d48752", "#8e452a"], peach: ["#ffb28e", "#f29272", "#ffd0b3"],
       mint: ["#91dfc5", "#61c3a7", "#bcebd9"],
+      emerald: ["#29a36a", "#18794e", "#62c995"],
       brown: ["#5b3428", "#784838", "#3c251f"],
       cream: ["#fff1cf", "#e8d4aa", "#fff8e8"],
       slate: ["#60738f", "#45546b", "#8293aa"],
@@ -695,7 +696,12 @@ intensity:</textarea>
       const accentFlicker = /occasional|sudden|sharp|brief/.test(motionGrammar) && /flicker|flash|spike|burst/.test(motionGrammar);
       const multiCluster = /(?:two|2|separate|independent|different)\s+clusters?|clusters?.*(?:different|separate|independent)/.test(patternSource);
       const hasOutlier = /one (?:light )?(?:offset|outside|apart|rebellious|out of formation)|single (?:light )?(?:offset|outside|apart)/.test(lower);
-      const formation = /rigid grid|strict grid|perfect grid/.test(patternSource) ? "grid" : "diamond";
+      const rejectsGrid = /(?:no|not|without|avoid)\s+(?:a\s+)?(?:rigid|strict|perfect)?\s*grid/.test(patternSource);
+      const formation = !rejectsGrid && /rigid grid|strict grid|perfect grid/.test(patternSource) ? "grid" : "diamond";
+      const organicSpacing =
+        /organic|natural(?:ly)?|irregular|uneven|asymmetr/.test(patternSource) ||
+        /some lights?.*(?:closer|cluster).*(?:others?|the rest).*(?:farther|further|drift|apart)/.test(patternSource) ||
+        rejectsGrid;
 
       return {
         colors: [...new Set(colors)].slice(0, 3),
@@ -710,7 +716,8 @@ intensity:</textarea>
         accentFlicker,
         multiCluster,
         hasOutlier,
-        formation
+        formation,
+        organicSpacing
       };
     }
 
@@ -728,6 +735,7 @@ intensity:</textarea>
         cell.style.removeProperty("--cell-speed");
         cell.style.removeProperty("--outlier-x");
         cell.style.removeProperty("--outlier-y");
+        cell.style.removeProperty("translate");
         cell.style.setProperty("--cell", colors[map[i]]);
         cell.style.background = expression.blend === "gradient"
           ? `linear-gradient(135deg, ${colors[map[i]]}, ${colors[(map[i] + 1) % colors.length]})`
@@ -749,6 +757,17 @@ intensity:</textarea>
           cell.classList.add("outlier");
           cell.style.setProperty("--outlier-x", "22px");
           cell.style.setProperty("--outlier-y", "-18px");
+        }
+        if (expression.organicSpacing) {
+          const organicOffsets = [
+            [-18,-10],[-7,-15],[8,-19],[22,-7],
+            [-24,3],[-8,-3],[5,5],[25,1],
+            [-20,17],[-3,12],[11,18],[29,15],
+            [-12,31],[2,25],[18,34],[35,28]
+          ];
+          const [x, y] = organicOffsets[i];
+          const outlierBoost = cell.classList.contains("outlier") ? 18 : 0;
+          cell.style.translate = `${x + outlierBoost}px ${y - outlierBoost}px`;
         }
       });
 
@@ -772,6 +791,7 @@ intensity:</textarea>
       if ((expression.activeCount ?? 16) < 16) scoreNotes.push(`${expression.activeCount} awake`);
       if (expression.multiCluster) scoreNotes.push("independent clusters");
       if (expression.accentFlicker) scoreNotes.push("accent flickers");
+      if (expression.organicSpacing) scoreNotes.push("organic spacing");
       status.textContent = `${chosen.join(" · ")} / ${expression.pattern} / ${expression.intensity}%${scoreNotes.length ? ` / ${scoreNotes.join(" · ")}` : ""}`;
     }
 
