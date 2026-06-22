@@ -126,11 +126,22 @@
         inset 0 1px 1px rgba(255,255,255,.35),
         0 0 calc(22px * var(--strength)) color-mix(in srgb, var(--cell), transparent 48%);
       transition: background 1.25s ease, border-radius .8s, opacity 1s, transform .8s;
-      animation-duration: var(--speed);
+      animation-duration: var(--cell-speed, var(--speed));
       animation-iteration-count: infinite;
       animation-timing-function: ease-in-out;
       animation-delay: calc(var(--i) * -90ms);
+      opacity: var(--cell-opacity, 1);
     }
+
+    .cell.sleeping {
+      animation: none !important;
+      opacity: .07 !important;
+      filter: saturate(.15) brightness(.35);
+      box-shadow: inset 0 1px 1px rgba(255,255,255,.08);
+    }
+
+    .cell.outlier { translate: var(--outlier-x, 0) var(--outlier-y, 0); }
+    #heart[data-formation="grid"] { transform: none; }
 
     .cell::after {
       content: "";
@@ -155,6 +166,8 @@
     #heart.cascade .cell { animation-name: cascade; }
     #heart.expand .cell { animation-name: expand; }
     #heart.breathe-flutter .cell { animation-name: breathe-flutter; }
+    #heart.undulate .cell { animation-name: undulate; }
+    #heart.weighted .cell { animation-name: weighted; }
     #heart.still .cell { animation: none; }
 
     @keyframes breathe {
@@ -223,6 +236,15 @@
       55% { transform:scale(1.09) rotate(6deg); filter:brightness(1.38); }
       62% { transform:scale(1.02) rotate(-3deg); filter:brightness(1.18); }
       72% { transform:scale(.96) rotate(2deg); filter:brightness(1.02); }
+    }
+    @keyframes undulate {
+      0%, 100% { transform: translateY(4px) rotate(-2deg) scale(.94); }
+      50% { transform: translateY(-6px) rotate(3deg) scale(1.04); }
+    }
+    @keyframes weighted {
+      0%, 18% { transform: scale(.88); filter: brightness(.82); }
+      38%, 68% { transform: scale(1.08); filter: brightness(1.18); }
+      82%, 100% { transform: scale(.92); filter: brightness(.9); }
     }
 
     .mood-caption {
@@ -439,6 +461,8 @@
               <option value="spin">Spin</option><option value="shimmer">Shimmer</option><option value="drift">Drift</option>
               <option value="tremble">Tremble</option><option value="cascade">Cascade</option><option value="expand">Expand / contract</option>
               <option value="breathe-flutter">Breathe + flutter</option>
+              <option value="undulate">Gentle undulation</option>
+              <option value="weighted">Weighted pauses</option>
               <option value="still">Stillness</option>
             </select>
           </div>
@@ -527,6 +551,11 @@ intensity:</textarea>
       white: ["#fffaf0", "#e8edf7", "#ffffff"], black: ["#111116", "#202027", "#08080c"],
       copper: ["#b76838", "#d48752", "#8e452a"], peach: ["#ffb28e", "#f29272", "#ffd0b3"],
       mint: ["#91dfc5", "#61c3a7", "#bcebd9"],
+      brown: ["#5b3428", "#784838", "#3c251f"],
+      cream: ["#fff1cf", "#e8d4aa", "#fff8e8"],
+      slate: ["#60738f", "#45546b", "#8293aa"],
+      iron: ["#5b5e68", "#3d4048", "#858892"],
+      neonpink: ["#ff3aa8", "#ff72c6", "#d91782"],
       green: ["#60cba0", "#49a98f", "#9adeb8"],
       red: ["#f35d69", "#d54259", "#ff8b8b"],
       silver: ["#c9ccdc", "#9ea9c3", "#e5dcf1"],
@@ -592,20 +621,33 @@ intensity:</textarea>
       const intensitySource = field("intensity") || lower;
       const speedSource = field("speed", "rhythm") || lower;
       const motionGrammar = `${motionSource} ${speedSource}`;
+      const normalizedColorSource = colorSource
+        .replace(/neon\s+pink/g, "neonpink")
+        .replace(/espresso(?:\s+brown)?/g, "brown")
+        .replace(/slate\s+blue/g, "slate")
+        .replace(/(?:steel|iron)\s+gr[ae]y/g, "iron");
       const colors = colorWords
-        .map(c => ({ c, at: colorSource.indexOf(c) }))
-        .filter(item => item.at >= 0 && !(item.c === "grey" && /charcoal\s+gr[ae]y/.test(colorSource)))
+        .map(c => ({ c, at: normalizedColorSource.indexOf(c) }))
+        .filter(item => item.at >= 0 && !(item.c === "grey" && /(?:charcoal|steel|iron)\s+gr[ae]y/.test(colorSource)))
         .sort((a, b) => a.at - b.at)
         .map(item => item.c)
         .slice(0, 3);
-      if (lower.includes("pink")) colors.push("rose");
+      if (colorSource.match(/neon\s+pink/)) colors.push("neonpink");
+      else if (lower.includes("pink")) colors.push("rose");
       if (lower.includes("purple")) colors.push("violet");
       if (lower.includes("orange") || lower.includes("warm")) colors.push("gold");
       if (colorSource.includes("gray")) colors.push("grey");
       if (colorSource.includes("deep red")) colors.push("crimson");
+      if (colorSource.match(/espresso|coffee|brown/)) colors.push("brown");
+      if (colorSource.match(/cream|ivory/)) colors.push("cream");
+      if (colorSource.match(/slate\s+blue/)) colors.push("slate");
+      if (colorSource.match(/iron\s+gr[ae]y|steel\s+gr[ae]y/)) colors.push("iron");
 
       const inferredMotion =
         motionGrammar.match(/breath/) && motionGrammar.match(/flutter|flit|delight/) ? "breathe-flutter" :
+        motionGrammar.match(/weighted pause|deliberate pause|held pause/) ? "weighted" :
+        motionGrammar.match(/breath/) && motionGrammar.match(/flicker|flash|spike|burst/) ? "breathe" :
+        motionGrammar.match(/undulat|cloth.*breeze|fabric.*breeze/) ? "undulate" :
         motionSource.match(/spin|turn|rotate|orbit/) ? "spin" :
         motionSource.match(/shimmer|glitter|sparkle|flicker/) ? "shimmer" :
         motionSource.match(/drift|float|wander/) ? "drift" :
@@ -615,8 +657,9 @@ intensity:</textarea>
         motionSource.match(/heart|beat|pulse/) ? "pulse" :
         motionSource.match(/ripple|wave|flow/) ? "ripple" :
         motionSource.match(/flutter|nervous/) ? "flutter" :
+        motionSource.match(/breath/) ? "breathe" :
         motionSource.match(/still|quiet|frozen/) ? "still" :
-        motionSource.match(/breath|soft|gentle|slow/) ? "breathe" : motion.value;
+        motionSource.match(/soft|gentle|slow/) ? "breathe" : motion.value;
 
       const inferredPattern =
         patternSource.match(/edge.*center|outside.*inside|bleed.*center/) ? "edges" :
@@ -635,13 +678,39 @@ intensity:</textarea>
       if (!field("intensity") && lower.match(/intense|vivid|electric|fierce|blinding|glare/)) inferredIntensity = Math.max(inferredIntensity, 86);
       if (!field("intensity") && lower.match(/low intensity|faint|subtle|barely|quiet/)) inferredIntensity = Math.min(inferredIntensity, 38);
 
+      const countMatch =
+        lower.match(/(?:only\s+)?(\d{1,2})\s+(?:of\s+(?:the\s+)?)?(?:sixteen|16)?\s*lights?\s+(?:are\s+)?(?:on|active|awake|lit|glow|glowing|really on)/) ||
+        lower.match(/(?:use|using|light|lighting)\s+(?:only\s+)?(\d{1,2})\s+(?:of\s+)?(?:the\s+)?(?:sixteen|16)?\s*lights?/);
+      const numberWords = { one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10, eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16 };
+      const wordCountMatch =
+        lower.match(/only\s+(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen)\s+(?:of\s+(?:the\s+)?)?(?:sixteen\s+)?lights?/) ||
+        lower.match(/(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen)\s+of\s+(?:the\s+)?sixteen\s+lights?/) ||
+        lower.match(/(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen)\s+lights?\s+(?:are\s+)?(?:on|active|awake|lit|glowing)/);
+      const activeCountValue = countMatch ? Number(countMatch[1]) : wordCountMatch ? numberWords[wordCountMatch[1]] : 16;
+      const activeCount = Math.max(1, Math.min(16, activeCountValue));
+      const cyclesMatch = speedSource.match(/(\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:cycles?|pulses?|beats?)\s+per\s+minute/);
+      const cyclesValue = cyclesMatch ? (numberWords[cyclesMatch[1]] || Number(cyclesMatch[1])) : null;
+      const cyclesPerMinute = cyclesValue ? Math.max(.25, cyclesValue) : null;
+      const variedBrightness = /some lights?.*(?:blinding|bright).*(?:others?|the rest).*(?:barely|dim|faint)|varying brightness|different brightness/i.test(lower);
+      const accentFlicker = /occasional|sudden|sharp|brief/.test(motionGrammar) && /flicker|flash|spike|burst/.test(motionGrammar);
+      const multiCluster = /(?:two|2|separate|independent|different)\s+clusters?|clusters?.*(?:different|separate|independent)/.test(patternSource);
+      const hasOutlier = /one (?:light )?(?:offset|outside|apart|rebellious|out of formation)|single (?:light )?(?:offset|outside|apart)/.test(lower);
+      const formation = /rigid grid|strict grid|perfect grid/.test(patternSource) ? "grid" : "diamond";
+
       return {
         colors: [...new Set(colors)].slice(0, 3),
         motion: inferredMotion,
         pattern: inferredPattern,
         intensity: inferredIntensity,
         speed: speedSource,
-        blend: lower.match(/bleed|gradient|shift|fade|melt/) ? "gradient" : "solid"
+        blend: lower.match(/bleed|gradient|shift|fade|melt/) ? "gradient" : "solid",
+        activeCount,
+        cyclesPerMinute,
+        variedBrightness,
+        accentFlicker,
+        multiCluster,
+        hasOutlier,
+        formation
       };
     }
 
@@ -650,19 +719,45 @@ intensity:</textarea>
       while (chosen.length < 3) chosen.push(chosen[chosen.length - 1] || "violet");
       const colors = chosen.map((name, i) => palettes[name][i % palettes[name].length]);
       const map = arrangements[expression.pattern];
+      const awakeOrder = [5,6,9,10,1,2,4,7,8,11,13,14,0,3,12,15];
+      const awake = new Set(awakeOrder.slice(0, expression.activeCount ?? 16));
 
       [...heart.children].forEach((cell, i) => {
+        cell.className = "cell";
+        cell.style.removeProperty("animation-name");
+        cell.style.removeProperty("--cell-speed");
+        cell.style.removeProperty("--outlier-x");
+        cell.style.removeProperty("--outlier-y");
         cell.style.setProperty("--cell", colors[map[i]]);
         cell.style.background = expression.blend === "gradient"
           ? `linear-gradient(135deg, ${colors[map[i]]}, ${colors[(map[i] + 1) % colors.length]})`
           : colors[map[i]];
-        cell.style.opacity = .62 + expression.intensity / 265;
+        const normalOpacity = .62 + expression.intensity / 265;
+        const brightnessScale = expression.variedBrightness ? [.32, .55, .8, 1][i % 4] : 1;
+        cell.style.setProperty("--cell-opacity", normalOpacity * brightnessScale);
+        if (!awake.has(i)) cell.classList.add("sleeping");
+        if (expression.multiCluster) {
+          const leftCluster = i % 4 < 2;
+          cell.style.animationName = leftCluster ? "breathe" : "pulse";
+          cell.style.setProperty("--cell-speed", leftCluster ? "7.2s" : "3.8s");
+        }
+        if (expression.accentFlicker && [2,7,12].includes(i) && awake.has(i)) {
+          cell.style.animationName = "shimmer";
+          cell.style.setProperty("--cell-speed", "1.15s");
+        }
+        if (expression.hasOutlier && i === awakeOrder[Math.min((expression.activeCount ?? 16) - 1, 15)]) {
+          cell.classList.add("outlier");
+          cell.style.setProperty("--outlier-x", "22px");
+          cell.style.setProperty("--outlier-y", "-18px");
+        }
       });
 
       heart.className = expression.motion;
+      heart.dataset.formation = expression.formation || "diamond";
       let duration = 5.4 - expression.intensity * .035;
       if (/fast|quick|rapid|85 mph|accelerat/.test(expression.speed || "")) duration *= .58;
       if (/slow|rest|gentle|leisure/.test(expression.speed || "")) duration *= 1.45;
+      if (expression.cyclesPerMinute) duration = 60 / expression.cyclesPerMinute;
       document.documentElement.style.setProperty("--speed", `${Math.max(1.35, duration)}s`);
       document.documentElement.style.setProperty("--strength", expression.intensity / 55);
       document.documentElement.style.setProperty("--glow", colors[0]);
@@ -673,7 +768,11 @@ intensity:</textarea>
 
       const mood = reply.value.split(/[.!?]/)[0].replace(/^I feel\s*/i, "").trim() || "an unnamed feeling";
       caption.textContent = expression.caption || `${mood.toLowerCase()} · ${expression.motion}`;
-      status.textContent = `${chosen.join(" · ")} / ${expression.pattern} / ${expression.intensity}%`;
+      const scoreNotes = [];
+      if ((expression.activeCount ?? 16) < 16) scoreNotes.push(`${expression.activeCount} awake`);
+      if (expression.multiCluster) scoreNotes.push("independent clusters");
+      if (expression.accentFlicker) scoreNotes.push("accent flickers");
+      status.textContent = `${chosen.join(" · ")} / ${expression.pattern} / ${expression.intensity}%${scoreNotes.length ? ` / ${scoreNotes.join(" · ")}` : ""}`;
     }
 
     document.querySelector("#express").addEventListener("click", () => render(infer(reply.value)));
@@ -715,4 +814,3 @@ intensity:</textarea>
   </script>
 </body>
 </html>
-
