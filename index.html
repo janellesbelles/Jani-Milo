@@ -148,6 +148,12 @@
     #heart.ripple .cell { animation-name: ripple; }
     #heart.flutter .cell { animation-name: flutter; }
     #heart.pulse .cell { animation-name: pulse; }
+    #heart.spin .cell { animation-name: spin; }
+    #heart.shimmer .cell { animation-name: shimmer; }
+    #heart.drift .cell { animation-name: drift; }
+    #heart.tremble .cell { animation-name: tremble; }
+    #heart.cascade .cell { animation-name: cascade; }
+    #heart.expand .cell { animation-name: expand; }
     #heart.still .cell { animation: none; }
 
     @keyframes breathe {
@@ -203,6 +209,12 @@
       86% { transform: scale(.96); }
       93% { transform: scale(1.08); }
     }
+    @keyframes spin { 0% { transform: rotate(0) scale(.92); } 50% { transform: rotate(180deg) scale(1.06); } 100% { transform: rotate(360deg) scale(.92); } }
+    @keyframes shimmer { 0%,100% { filter: brightness(.76); transform: scale(.94); } 28% { filter: brightness(1.45); transform: scale(1.04); } 76% { filter: brightness(1.25); transform: scale(1.07); } }
+    @keyframes drift { 0%,100% { transform: translate(-4px,3px) rotate(-3deg); } 50% { transform: translate(5px,-4px) rotate(4deg); } }
+    @keyframes tremble { 0%,100% { transform: translate(0); } 25% { transform: translate(-3px,2px); } 50% { transform: translate(3px,-2px); } 75% { transform: translate(-2px,-3px); } }
+    @keyframes cascade { 0%,100% { transform: scale(.82); opacity:.62; } 42% { transform: scale(1.12); opacity:1; } }
+    @keyframes expand { 0%,100% { transform: scale(.74); filter:brightness(.75); } 55% { transform: scale(1.14); filter:brightness(1.25); } }
 
     .mood-caption {
       position: absolute;
@@ -415,6 +427,8 @@
               <option value="pulse">Heartbeat</option>
               <option value="ripple">Ripple</option>
               <option value="flutter">Flutter</option>
+              <option value="spin">Spin</option><option value="shimmer">Shimmer</option><option value="drift">Drift</option>
+              <option value="tremble">Tremble</option><option value="cascade">Cascade</option><option value="expand">Expand / contract</option>
               <option value="still">Stillness</option>
             </select>
           </div>
@@ -425,6 +439,8 @@
               <option value="spiral">Spiral</option>
               <option value="rings">Soft rings</option>
               <option value="scatter">Constellation</option>
+              <option value="layered">Layered</option><option value="edges">Edges to center</option>
+              <option value="split">Split</option><option value="waves">Waves</option><option value="clusters">Clusters</option>
             </select>
           </div>
         </div>
@@ -494,6 +510,13 @@ intensity:</textarea>
       blue: ["#557bdc", "#6ba9e8", "#445fb6"],
       gold: ["#ffc766", "#ec9f4e", "#ffd997"],
       amber: ["#d8892e", "#f0a644", "#b96f27"],
+      crimson: ["#9f1835", "#c82d4d", "#741127"], charcoal: ["#28272e", "#3a3842", "#18171d"],
+      grey: ["#777986", "#555762", "#a4a5ad"], coral: ["#ff7a72", "#e95c62", "#ff9b89"],
+      cyan: ["#39d7e8", "#58bcd8", "#8aebef"], teal: ["#2ab7aa", "#16877f", "#67d8c5"],
+      indigo: ["#4b4fbd", "#353888", "#7477dc"], lavender: ["#bca2ef", "#9b7cd5", "#d8c6ff"],
+      white: ["#fffaf0", "#e8edf7", "#ffffff"], black: ["#111116", "#202027", "#08080c"],
+      copper: ["#b76838", "#d48752", "#8e452a"], peach: ["#ffb28e", "#f29272", "#ffd0b3"],
+      mint: ["#91dfc5", "#61c3a7", "#bcebd9"],
       green: ["#60cba0", "#49a98f", "#9adeb8"],
       red: ["#f35d69", "#d54259", "#ff8b8b"],
       silver: ["#c9ccdc", "#9ea9c3", "#e5dcf1"],
@@ -505,7 +528,12 @@ intensity:</textarea>
       center: [2,1,2,1, 1,0,0,2, 2,0,0,1, 1,2,1,2],
       rings: [2,2,2,2, 2,1,1,2, 2,1,1,2, 2,2,2,2],
       spiral: [0,0,1,1, 2,0,2,1, 2,1,2,1, 2,1,1,1],
-      scatter: [0,2,1,0, 1,0,2,1, 2,1,0,2, 0,2,1,0]
+      scatter: [0,2,1,0, 1,0,2,1, 2,1,0,2, 0,2,1,0],
+      layered: [2,2,2,2, 1,1,1,1, 0,0,0,0, 1,1,2,2],
+      edges: [1,1,1,1, 1,2,2,1, 1,2,2,1, 1,1,1,1],
+      split: [0,0,1,1, 0,0,1,1, 0,0,1,1, 0,0,1,1],
+      waves: [0,1,2,1, 1,2,1,0, 2,1,0,1, 1,0,1,2],
+      clusters: [0,0,2,2, 0,1,2,2, 1,1,0,0, 2,1,0,1]
     };
 
     const seeds = {
@@ -542,35 +570,66 @@ intensity:</textarea>
 
     function infer(text) {
       const lower = text.toLowerCase();
-      const colors = colorWords.filter(c => lower.includes(c)).slice(0, 3);
+      const fields = {};
+      for (const line of text.split(/\r?\n/)) {
+        const match = line.match(/^\s*(colors?|arrangement|pattern|movement|motion|speed|rhythm|brightness|intensity)\s*:\s*(.+)$/i);
+        if (match) fields[match[1].toLowerCase()] = match[2].trim().toLowerCase();
+      }
+      const field = (...names) => names.map(name => fields[name]).find(Boolean) || "";
+      const colorSource = field("color", "colors") || lower;
+      const motionSource = field("movement", "motion") || lower;
+      const patternSource = field("arrangement", "pattern") || lower;
+      const intensitySource = field("intensity") || lower;
+      const speedSource = field("speed", "rhythm") || lower;
+      const colors = colorWords
+        .map(c => ({ c, at: colorSource.indexOf(c) }))
+        .filter(item => item.at >= 0 && !(item.c === "grey" && /charcoal\s+gr[ae]y/.test(colorSource)))
+        .sort((a, b) => a.at - b.at)
+        .map(item => item.c)
+        .slice(0, 3);
       if (lower.includes("pink")) colors.push("rose");
       if (lower.includes("purple")) colors.push("violet");
       if (lower.includes("orange") || lower.includes("warm")) colors.push("gold");
+      if (colorSource.includes("gray")) colors.push("grey");
+      if (colorSource.includes("deep red")) colors.push("crimson");
 
       const inferredMotion =
-        lower.match(/heart|beat|pulse/) ? "pulse" :
-        lower.match(/ripple|wave|flow/) ? "ripple" :
-        lower.match(/flutter|shiver|nervous/) ? "flutter" :
-        lower.match(/still|quiet|frozen/) ? "still" :
-        lower.match(/breath|soft|gentle|slow/) ? "breathe" : motion.value;
+        motionSource.match(/spin|turn|rotate|orbit/) ? "spin" :
+        motionSource.match(/shimmer|glitter|sparkle|flicker/) ? "shimmer" :
+        motionSource.match(/drift|float|wander/) ? "drift" :
+        motionSource.match(/tremble|shake|quiver|shiver/) ? "tremble" :
+        motionSource.match(/cascade|fall|sequence/) ? "cascade" :
+        motionSource.match(/expand|contract|swell|open|close/) ? "expand" :
+        motionSource.match(/heart|beat|pulse/) ? "pulse" :
+        motionSource.match(/ripple|wave|flow/) ? "ripple" :
+        motionSource.match(/flutter|nervous/) ? "flutter" :
+        motionSource.match(/still|quiet|frozen/) ? "still" :
+        motionSource.match(/breath|soft|gentle|slow/) ? "breathe" : motion.value;
 
       const inferredPattern =
-        lower.includes("spiral") ? "spiral" :
-        lower.match(/ring|protect|surround/) ? "rings" :
-        lower.match(/scatter|star|constellation|chaos/) ? "scatter" :
-        lower.match(/center|inside|inner/) ? "center" : pattern.value;
+        patternSource.match(/edge.*center|outside.*inside|bleed.*center/) ? "edges" :
+        patternSource.match(/layer/) ? "layered" :
+        patternSource.match(/split|half|divide/) ? "split" :
+        patternSource.match(/wave|row/) ? "waves" :
+        patternSource.match(/cluster|group/) ? "clusters" :
+        patternSource.includes("spiral") ? "spiral" :
+        patternSource.match(/ring|protect|surround|circular/) ? "rings" :
+        patternSource.match(/scatter|star|constellation|chaos/) ? "scatter" :
+        patternSource.match(/center|inside|inner/) ? "center" : pattern.value;
 
       let inferredIntensity = Number(intensity.value);
-      const statedIntensity = lower.match(/(?:intensity(?:\s*(?:is|:|=|at))?\s*|)(\d{1,3})\s*(?:%|percent|intensity)/);
-      if (statedIntensity) inferredIntensity = Math.max(20, Math.min(100, Number(statedIntensity[1])));
-      if (lower.match(/intense|vivid|electric|fierce|bright/)) inferredIntensity = Math.max(inferredIntensity, 86);
-      if (lower.match(/low intensity|faint|subtle|barely|quiet/)) inferredIntensity = Math.min(inferredIntensity, 38);
+      const statedIntensity = intensitySource.match(/\d{1,3}/) || lower.match(/(\d{1,3})\s*(?:%|percent|intensity)/);
+      if (statedIntensity) inferredIntensity = Math.max(20, Math.min(100, Number(statedIntensity[1] ?? statedIntensity[0])));
+      if (!field("intensity") && lower.match(/intense|vivid|electric|fierce|blinding|glare/)) inferredIntensity = Math.max(inferredIntensity, 86);
+      if (!field("intensity") && lower.match(/low intensity|faint|subtle|barely|quiet/)) inferredIntensity = Math.min(inferredIntensity, 38);
 
       return {
         colors: [...new Set(colors)].slice(0, 3),
         motion: inferredMotion,
         pattern: inferredPattern,
-        intensity: inferredIntensity
+        intensity: inferredIntensity,
+        speed: speedSource,
+        blend: lower.match(/bleed|gradient|shift|fade|melt/) ? "gradient" : "solid"
       };
     }
 
@@ -582,11 +641,16 @@ intensity:</textarea>
 
       [...heart.children].forEach((cell, i) => {
         cell.style.setProperty("--cell", colors[map[i]]);
+        cell.style.background = expression.blend === "gradient"
+          ? `linear-gradient(135deg, ${colors[map[i]]}, ${colors[(map[i] + 1) % colors.length]})`
+          : colors[map[i]];
         cell.style.opacity = .62 + expression.intensity / 265;
       });
 
       heart.className = expression.motion;
-      const duration = 5.4 - expression.intensity * .035;
+      let duration = 5.4 - expression.intensity * .035;
+      if (/fast|quick|rapid|85 mph|accelerat/.test(expression.speed || "")) duration *= .58;
+      if (/slow|rest|gentle|leisure/.test(expression.speed || "")) duration *= 1.45;
       document.documentElement.style.setProperty("--speed", `${Math.max(1.35, duration)}s`);
       document.documentElement.style.setProperty("--strength", expression.intensity / 55);
       document.documentElement.style.setProperty("--glow", colors[0]);
