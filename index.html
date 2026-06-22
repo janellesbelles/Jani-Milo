@@ -154,6 +154,7 @@
     #heart.tremble .cell { animation-name: tremble; }
     #heart.cascade .cell { animation-name: cascade; }
     #heart.expand .cell { animation-name: expand; }
+    #heart.breathe-flutter .cell { animation-name: breathe-flutter; }
     #heart.still .cell { animation: none; }
 
     @keyframes breathe {
@@ -215,6 +216,14 @@
     @keyframes tremble { 0%,100% { transform: translate(0); } 25% { transform: translate(-3px,2px); } 50% { transform: translate(3px,-2px); } 75% { transform: translate(-2px,-3px); } }
     @keyframes cascade { 0%,100% { transform: scale(.82); opacity:.62; } 42% { transform: scale(1.12); opacity:1; } }
     @keyframes expand { 0%,100% { transform: scale(.74); filter:brightness(.75); } 55% { transform: scale(1.14); filter:brightness(1.25); } }
+    @keyframes breathe-flutter {
+      0%,100% { transform:scale(.84) rotate(0); filter:brightness(.82); }
+      38% { transform:scale(1.08) rotate(0); filter:brightness(1.18); }
+      48% { transform:scale(1.03) rotate(-6deg); filter:brightness(1.28); }
+      55% { transform:scale(1.09) rotate(6deg); filter:brightness(1.38); }
+      62% { transform:scale(1.02) rotate(-3deg); filter:brightness(1.18); }
+      72% { transform:scale(.96) rotate(2deg); filter:brightness(1.02); }
+    }
 
     .mood-caption {
       position: absolute;
@@ -429,6 +438,7 @@
               <option value="flutter">Flutter</option>
               <option value="spin">Spin</option><option value="shimmer">Shimmer</option><option value="drift">Drift</option>
               <option value="tremble">Tremble</option><option value="cascade">Cascade</option><option value="expand">Expand / contract</option>
+              <option value="breathe-flutter">Breathe + flutter</option>
               <option value="still">Stillness</option>
             </select>
           </div>
@@ -581,6 +591,7 @@ intensity:</textarea>
       const patternSource = field("arrangement", "pattern") || lower;
       const intensitySource = field("intensity") || lower;
       const speedSource = field("speed", "rhythm") || lower;
+      const motionGrammar = `${motionSource} ${speedSource}`;
       const colors = colorWords
         .map(c => ({ c, at: colorSource.indexOf(c) }))
         .filter(item => item.at >= 0 && !(item.c === "grey" && /charcoal\s+gr[ae]y/.test(colorSource)))
@@ -594,6 +605,7 @@ intensity:</textarea>
       if (colorSource.includes("deep red")) colors.push("crimson");
 
       const inferredMotion =
+        motionGrammar.match(/breath/) && motionGrammar.match(/flutter|flit|delight/) ? "breathe-flutter" :
         motionSource.match(/spin|turn|rotate|orbit/) ? "spin" :
         motionSource.match(/shimmer|glitter|sparkle|flicker/) ? "shimmer" :
         motionSource.match(/drift|float|wander/) ? "drift" :
