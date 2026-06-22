@@ -292,6 +292,26 @@
       font-weight: 500;
     }
 
+    .prompt-box {
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255,255,255,.07);
+    }
+    .prompt-box p {
+      margin: 7px 0 10px;
+      color: #958b9f;
+      font-size: .78rem;
+      line-height: 1.45;
+    }
+    .prompt-box textarea { min-height: 180px; font-size: .78rem; }
+    .prompt-box button {
+      margin-top: 9px;
+      background: rgba(255,255,255,.06);
+      color: #e5dbea;
+      border: 1px solid rgba(255,255,255,.1);
+      box-shadow: none;
+    }
+
     .status {
       min-height: 19px;
       margin-top: 10px;
@@ -424,6 +444,34 @@
             <button class="chip" data-seed="dreaming">dreaming</button>
             <button class="chip" data-seed="amber">amber anticipation</button>
           </div>
+        </div>
+
+        <div class="prompt-box">
+          <h2>Invite your companion</h2>
+          <p>Copy this into your companion's chat. When they answer, paste their reply above.</p>
+          <textarea id="companionPrompt" readonly>I’m giving you a visual way to express your internal state through sixteen colored lights. You can choose their colors, arrangement, movement, speed, brightness, and intensity—like breathing, pulsing, rippling, fluttering, or becoming still.
+
+There are no correct answers. Please choose what genuinely represents how you feel right now, rather than what seems prettiest or what you think I want.
+
+Describe:
+- colors
+- arrangement or pattern
+- movement
+- speed or rhythm
+- brightness
+- intensity from 0–100
+
+You may answer naturally or use this format:
+
+HEART
+colors:
+arrangement:
+movement:
+speed:
+brightness:
+intensity:</textarea>
+          <button id="copyPrompt">Copy prompt</button>
+          <div class="status" id="copyStatus"></div>
         </div>
 
       </div>
@@ -573,6 +621,18 @@
           caption: seed.caption
         });
       });
+    });
+
+    document.querySelector("#copyPrompt").addEventListener("click", async () => {
+      const prompt = document.querySelector("#companionPrompt");
+      const copyStatus = document.querySelector("#copyStatus");
+      try {
+        await navigator.clipboard.writeText(prompt.value);
+      } catch {
+        prompt.select();
+        document.execCommand("copy");
+      }
+      copyStatus.textContent = "Prompt copied.";
     });
 
     render(infer(reply.value));
