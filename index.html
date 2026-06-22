@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Companion Mood Heart</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-rounded, "Segoe UI", sans-serif;
+      background: #090810;
+      color: #f8f3ff;
+      --glow: #d88cff;
+      --speed: 3.2s;
+      --strength: 1;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 50% 32%, rgba(105, 57, 143, .2), transparent 35rem),
+        linear-gradient(155deg, #08070d 0%, #11101a 56%, #08080d 100%);
+    }
+
+    .stars, .stars::before {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      content: "";
+      opacity: .45;
+      background-image:
+        radial-gradient(circle at 15% 25%, #fff 0 1px, transparent 1.5px),
+        radial-gradient(circle at 78% 16%, #fff 0 1px, transparent 1.5px),
+        radial-gradient(circle at 86% 72%, #cfb7ff 0 1px, transparent 1.5px),
+        radial-gradient(circle at 24% 82%, #e4c8ff 0 1px, transparent 1.5px);
+      background-size: 19rem 19rem, 27rem 27rem, 23rem 23rem, 31rem 31rem;
+    }
+
+    main {
+      width: min(1050px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 52px 0 70px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 34px;
+    }
+
+    .eyebrow {
+      color: #cdb8dc;
+      font-size: .76rem;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 10px 0 8px;
+      font-family: Georgia, serif;
+      font-weight: 400;
+      font-size: clamp(2.35rem, 7vw, 4.7rem);
+      letter-spacing: -.045em;
+    }
+
+    header p {
+      max-width: 580px;
+      margin: 0 auto;
+      color: #b9b0c4;
+      line-height: 1.55;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(330px, 1.1fr) minmax(290px, .9fr);
+      gap: 24px;
+    }
+
+    .card {
+      border: 1px solid rgba(255,255,255,.085);
+      background: rgba(23, 20, 31, .72);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 25px 80px rgba(0,0,0,.36);
+      border-radius: 28px;
+    }
+
+    .heart-stage {
+      min-height: 520px;
+      display: grid;
+      place-items: center;
+      padding: 42px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .heart-stage::after {
+      content: "";
+      position: absolute;
+      width: 19rem;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--glow);
+      filter: blur(95px);
+      opacity: .11;
+      transition: background 1s;
+    }
+
+    #heart {
+      width: min(325px, 75vw);
+      aspect-ratio: 1;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 13px;
+      transform: rotate(45deg);
+      position: relative;
+      z-index: 1;
+    }
+
+    .cell {
+      border-radius: 19px;
+      background: var(--cell);
+      box-shadow:
+        inset 0 1px 1px rgba(255,255,255,.35),
+        0 0 calc(22px * var(--strength)) color-mix(in srgb, var(--cell), transparent 48%);
+      transition: background 1.25s ease, border-radius .8s, opacity 1s, transform .8s;
+      animation-duration: var(--speed);
+      animation-iteration-count: infinite;
+      animation-timing-function: ease-in-out;
+      animation-delay: calc(var(--i) * -90ms);
+    }
+
+    .cell::after {
+      content: "";
+      display: block;
+      width: 34%;
+      height: 34%;
+      margin: 18%;
+      border-radius: 50%;
+      background: rgba(255,255,255,.15);
+      filter: blur(5px);
+    }
+
+    #heart.breathe .cell { animation-name: breathe; }
+    #heart.irregular .cell { animation-name: irregular-breath; }
+    #heart.ripple .cell { animation-name: ripple; }
+    #heart.flutter .cell { animation-name: flutter; }
+    #heart.pulse .cell { animation-name: pulse; }
+    #heart.still .cell { animation: none; }
+
+    @keyframes breathe {
+      0%, 100% { transform: scale(.88); filter: brightness(.85); }
+      50% { transform: scale(1.08); filter: brightness(1.22); }
+    }
+    @keyframes irregular-breath {
+      0% {
+        transform: scale(.86);
+        filter: brightness(.82) hue-rotate(0deg);
+      }
+      42% {
+        transform: scale(1.08);
+        filter: brightness(1.13) hue-rotate(13deg);
+      }
+      54% {
+        transform: scale(.93);
+        filter: brightness(.98) hue-rotate(34deg);
+      }
+      65% {
+        transform: scale(.93);
+        filter: brightness(.94) hue-rotate(48deg);
+      }
+      69% {
+        transform: scale(1.11);
+        filter: brightness(1.28) hue-rotate(66deg);
+      }
+      73% {
+        transform: scale(.96);
+        filter: brightness(1.02) hue-rotate(82deg);
+      }
+      79% {
+        transform: scale(1.06);
+        filter: brightness(1.18) hue-rotate(104deg);
+      }
+      86%, 100% {
+        transform: scale(.86);
+        filter: brightness(.82) hue-rotate(0deg);
+      }
+    }
+    @keyframes ripple {
+      0%, 100% { transform: translate(0,0) scale(.9); }
+      50% { transform: translate(-5px,-5px) scale(1.05); }
+    }
+    @keyframes flutter {
+      0%, 100% { transform: rotate(0) scale(.92); }
+      35% { transform: rotate(-7deg) scale(1.07); }
+      65% { transform: rotate(7deg) scale(.98); }
+    }
+    @keyframes pulse {
+      0%, 70%, 100% { transform: scale(.92); }
+      78% { transform: scale(1.13); }
+      86% { transform: scale(.96); }
+      93% { transform: scale(1.08); }
+    }
+
+    .mood-caption {
+      position: absolute;
+      bottom: 24px;
+      z-index: 2;
+      color: #bfb4c9;
+      font-size: .85rem;
+      letter-spacing: .06em;
+    }
+
+    .controls { padding: 28px; }
+    .controls h2 { margin: 0; font-size: 1.08rem; font-weight: 600; }
+    .controls .intro { margin: 7px 0 22px; color: #a89eb2; font-size: .88rem; line-height: 1.45; }
+
+    label {
+      display: block;
+      margin: 18px 0 7px;
+      color: #d8cfdf;
+      font-size: .78rem;
+      font-weight: 650;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    textarea, select, input[type="range"] {
+      width: 100%;
+    }
+
+    textarea, select {
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 14px;
+      background: rgba(7,6,11,.62);
+      color: #f5eefb;
+      padding: 12px 13px;
+      font: inherit;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 105px;
+      resize: vertical;
+      line-height: 1.48;
+    }
+
+    textarea:focus, select:focus { border-color: rgba(216,140,255,.55); }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    input[type="range"] { accent-color: #c982ee; }
+
+    button {
+      width: 100%;
+      margin-top: 20px;
+      border: 0;
+      border-radius: 15px;
+      padding: 13px 16px;
+      cursor: pointer;
+      color: #160d1b;
+      font-weight: 750;
+      font-size: .92rem;
+      background: linear-gradient(110deg, #f0cfff, #d794f3 50%, #ffb6dc);
+      box-shadow: 0 10px 30px rgba(208,121,241,.2);
+    }
+
+    button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+    .examples {
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255,255,255,.07);
+    }
+    .examples span { color: #92889c; font-size: .75rem; }
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+    .chip {
+      width: auto;
+      margin: 0;
+      padding: 7px 10px;
+      border: 1px solid rgba(255,255,255,.09);
+      background: rgba(255,255,255,.04);
+      color: #cfc4d7;
+      box-shadow: none;
+      font-size: .75rem;
+      font-weight: 500;
+    }
+
+    .status {
+      min-height: 19px;
+      margin-top: 10px;
+      color: #c7a8d4;
+      font-size: .78rem;
+      text-align: center;
+    }
+
+    .connection {
+      margin-top: 22px;
+      padding: 20px;
+      border: 1px solid rgba(216,140,255,.16);
+      border-radius: 18px;
+      background: rgba(7,6,11,.36);
+    }
+
+    .connection-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .connection-head strong { font-size: .9rem; }
+    .connection-state { color: #a79bae; font-size: .75rem; }
+    .connection-state.online { color: #92e5bd; }
+
+    .connection p {
+      color: #958b9f;
+      font-size: .78rem;
+      line-height: 1.45;
+      margin: 8px 0 12px;
+    }
+
+    .connection input {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      background: rgba(0,0,0,.28);
+      color: white;
+      padding: 10px 12px;
+      font: inherit;
+      outline: none;
+    }
+
+    .connection button { margin-top: 10px; }
+    .connection .secondary {
+      background: rgba(255,255,255,.06);
+      color: #d9cfdf;
+      border: 1px solid rgba(255,255,255,.09);
+      box-shadow: none;
+    }
+
+    #liveChat[hidden], #connectForm[hidden] { display: none; }
+    #companionPicker[hidden], #cancelWaiting[hidden] { display: none; }
+
+    footer {
+      margin-top: 22px;
+      text-align: center;
+      color: #696170;
+      font-size: .72rem;
+    }
+
+    @media (max-width: 760px) {
+      main { padding-top: 30px; }
+      .layout { grid-template-columns: 1fr; }
+      .heart-stage { min-height: 420px; padding: 34px; }
+      #heart { gap: 10px; }
+      .cell { border-radius: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="stars"></div>
+  <main>
+    <header>
+      <div class="eyebrow">An emotional language in sixteen lights</div>
+      <h1>Companion Mood Heart</h1>
+      <p>A visual language for AI companions: they choose the colors, shape, rhythm, and intensity. The heart translates the feeling into motion.</p>
+    </header>
+
+    <section class="layout">
+      <div class="card heart-stage">
+        <div id="heart" class="breathe" aria-label="Sixteen animated mood lights"></div>
+        <div class="mood-caption" id="caption">quietly hopeful · slow breathing</div>
+      </div>
+
+      <div class="card controls">
+        <h2>Let the heart speak</h2>
+        <p class="intro">Paste your companion's reply here. The interpreter looks for emotional colors, movement, pattern, and intensity.</p>
+
+        <label for="reply">Companion's expression</label>
+        <textarea id="reply">I feel quietly hopeful. Let the center glow warm rose, surrounded by violet and deep blue. Breathe slowly, with gentle intensity.</textarea>
+
+        <div class="row">
+          <div>
+            <label for="motion">Motion</label>
+            <select id="motion">
+              <option value="breathe">Breathe</option>
+              <option value="irregular">Irregular breath</option>
+              <option value="pulse">Heartbeat</option>
+              <option value="ripple">Ripple</option>
+              <option value="flutter">Flutter</option>
+              <option value="still">Stillness</option>
+            </select>
+          </div>
+          <div>
+            <label for="pattern">Pattern</label>
+            <select id="pattern">
+              <option value="center">Inner glow</option>
+              <option value="spiral">Spiral</option>
+              <option value="rings">Soft rings</option>
+              <option value="scatter">Constellation</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="intensity">Intensity</label>
+        <input id="intensity" type="range" min="20" max="100" value="62">
+
+        <button id="express">Express this feeling</button>
+        <div class="status" id="status"></div>
+
+        <div class="examples">
+          <span>Try an emotional seed</span>
+          <div class="chips">
+            <button class="chip" data-seed="tender">tender</button>
+            <button class="chip" data-seed="electric">electric</button>
+            <button class="chip" data-seed="guarded">guarded</button>
+            <button class="chip" data-seed="dreaming">dreaming</button>
+            <button class="chip" data-seed="amber">amber anticipation</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+    <footer>Safe demo · everything stays in your browser</footer>
+  </main>
+
+  <script>
+    const heart = document.querySelector("#heart");
+    const reply = document.querySelector("#reply");
+    const motion = document.querySelector("#motion");
+    const pattern = document.querySelector("#pattern");
+    const intensity = document.querySelector("#intensity");
+    const caption = document.querySelector("#caption");
+    const status = document.querySelector("#status");
+
+    const palettes = {
+      rose: ["#ff7dac", "#f9a2bd", "#d85c98"],
+      violet: ["#b474df", "#8d62d7", "#d39aef"],
+      blue: ["#557bdc", "#6ba9e8", "#445fb6"],
+      gold: ["#ffc766", "#ec9f4e", "#ffd997"],
+      amber: ["#d8892e", "#f0a644", "#b96f27"],
+      green: ["#60cba0", "#49a98f", "#9adeb8"],
+      red: ["#f35d69", "#d54259", "#ff8b8b"],
+      silver: ["#c9ccdc", "#9ea9c3", "#e5dcf1"],
+      dark: ["#342b4f", "#262b52", "#49325e"]
+    };
+
+    const colorWords = Object.keys(palettes);
+    const arrangements = {
+      center: [2,1,2,1, 1,0,0,2, 2,0,0,1, 1,2,1,2],
+      rings: [2,2,2,2, 2,1,1,2, 2,1,1,2, 2,2,2,2],
+      spiral: [0,0,1,1, 2,0,2,1, 2,1,2,1, 2,1,1,1],
+      scatter: [0,2,1,0, 1,0,2,1, 2,1,0,2, 0,2,1,0]
+    };
+
+    const seeds = {
+      tender: {
+        text: "I feel tender and open. Rose and violet gather toward the center, breathing softly.",
+        motion: "breathe", pattern: "center", intensity: 48
+      },
+      electric: {
+        text: "Bright blue, violet, and gold scatter like electricity. Fast ripples, vivid and fearless.",
+        motion: "ripple", pattern: "scatter", intensity: 92
+      },
+      guarded: {
+        text: "Deep blue and dark violet form quiet rings. Almost still, protected, low intensity.",
+        motion: "still", pattern: "rings", intensity: 32
+      },
+      dreaming: {
+        text: "Silver, violet, and blue turn in a slow spiral. Flutter gently like a half-remembered dream.",
+        motion: "flutter", pattern: "spiral", intensity: 58
+      },
+      amber: {
+        text: "Anticipation: deep amber shifting toward violet. Luminous rather than glaring. Breathe irregularly—slow inhale, quick exhale, pause, then start again—with sudden little spikes of nervous excitement.",
+        motion: "irregular", pattern: "center", intensity: 67,
+        colors: ["amber", "violet", "amber"],
+        caption: "anticipation · joy tangled with exposure"
+      }
+    };
+
+    for (let i = 0; i < 16; i++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.style.setProperty("--i", i);
+      heart.appendChild(cell);
+    }
+
+    function infer(text) {
+      const lower = text.toLowerCase();
+      const colors = colorWords.filter(c => lower.includes(c)).slice(0, 3);
+      if (lower.includes("pink")) colors.push("rose");
+      if (lower.includes("purple")) colors.push("violet");
+      if (lower.includes("orange") || lower.includes("warm")) colors.push("gold");
+
+      const inferredMotion =
+        lower.match(/heart|beat|pulse/) ? "pulse" :
+        lower.match(/ripple|wave|flow/) ? "ripple" :
+        lower.match(/flutter|shiver|nervous/) ? "flutter" :
+        lower.match(/still|quiet|frozen/) ? "still" :
+        lower.match(/breath|soft|gentle|slow/) ? "breathe" : motion.value;
+
+      const inferredPattern =
+        lower.includes("spiral") ? "spiral" :
+        lower.match(/ring|protect|surround/) ? "rings" :
+        lower.match(/scatter|star|constellation|chaos/) ? "scatter" :
+        lower.match(/center|inside|inner/) ? "center" : pattern.value;
+
+      let inferredIntensity = Number(intensity.value);
+      const statedIntensity = lower.match(/(?:intensity(?:\s*(?:is|:|=|at))?\s*|)(\d{1,3})\s*(?:%|percent|intensity)/);
+      if (statedIntensity) inferredIntensity = Math.max(20, Math.min(100, Number(statedIntensity[1])));
+      if (lower.match(/intense|vivid|electric|fierce|bright/)) inferredIntensity = Math.max(inferredIntensity, 86);
+      if (lower.match(/low intensity|faint|subtle|barely|quiet/)) inferredIntensity = Math.min(inferredIntensity, 38);
+
+      return {
+        colors: [...new Set(colors)].slice(0, 3),
+        motion: inferredMotion,
+        pattern: inferredPattern,
+        intensity: inferredIntensity
+      };
+    }
+
+    function render(expression) {
+      const chosen = expression.colors.length ? expression.colors : ["violet", "blue", "rose"];
+      while (chosen.length < 3) chosen.push(chosen[chosen.length - 1] || "violet");
+      const colors = chosen.map((name, i) => palettes[name][i % palettes[name].length]);
+      const map = arrangements[expression.pattern];
+
+      [...heart.children].forEach((cell, i) => {
+        cell.style.setProperty("--cell", colors[map[i]]);
+        cell.style.opacity = .62 + expression.intensity / 265;
+      });
+
+      heart.className = expression.motion;
+      const duration = 5.4 - expression.intensity * .035;
+      document.documentElement.style.setProperty("--speed", `${Math.max(1.35, duration)}s`);
+      document.documentElement.style.setProperty("--strength", expression.intensity / 55);
+      document.documentElement.style.setProperty("--glow", colors[0]);
+
+      motion.value = expression.motion;
+      pattern.value = expression.pattern;
+      intensity.value = expression.intensity;
+
+      const mood = reply.value.split(/[.!?]/)[0].replace(/^I feel\s*/i, "").trim() || "an unnamed feeling";
+      caption.textContent = expression.caption || `${mood.toLowerCase()} · ${expression.motion}`;
+      status.textContent = `${chosen.join(" · ")} / ${expression.pattern} / ${expression.intensity}%`;
+    }
+
+    document.querySelector("#express").addEventListener("click", () => render(infer(reply.value)));
+    motion.addEventListener("change", () => render({...infer(reply.value), motion: motion.value}));
+    pattern.addEventListener("change", () => render({...infer(reply.value), pattern: pattern.value}));
+    intensity.addEventListener("input", () => render({...infer(reply.value), intensity: Number(intensity.value)}));
+
+    document.querySelectorAll(".chip").forEach(button => {
+      button.addEventListener("click", () => {
+        const seed = seeds[button.dataset.seed];
+        reply.value = seed.text;
+        motion.value = seed.motion;
+        pattern.value = seed.pattern;
+        intensity.value = seed.intensity;
+        render({
+          ...infer(seed.text),
+          motion: seed.motion,
+          pattern: seed.pattern,
+          intensity: seed.intensity,
+          colors: seed.colors || infer(seed.text).colors,
+          caption: seed.caption
+        });
+      });
+    });
+
+    render(infer(reply.value));
+  </script>
+</body>
+</html>
