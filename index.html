@@ -378,7 +378,7 @@
       padding: 10px 12px;
       font: inherit;
     }
-    .memory-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .memory-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
     .memory-actions button { margin-top: 10px; }
     .memory-actions .secondary {
       background: rgba(255,255,255,.06);
@@ -530,6 +530,8 @@
           <div class="memory-actions">
             <button id="saveHeart">Save this heart</button>
             <button class="secondary" id="loadHeart">Load selected</button>
+            <button class="secondary" id="renameHeart">Rename selected</button>
+            <button class="secondary" id="deleteHeart">Delete selected</button>
           </div>
           <div class="status" id="memoryStatus"></div>
         </div>
@@ -1008,6 +1010,39 @@ intensity:</textarea>
       reply.value = memory.text;
       render(memory.expression);
       memoryStatus.textContent = `${memory.label} is speaking again.`;
+    });
+    savedHearts.addEventListener("change", () => {
+      const memory = readMemories().find(item => item.id === savedHearts.value);
+      if (memory) heartName.value = memory.label;
+    });
+    document.querySelector("#renameHeart").addEventListener("click", () => {
+      const memories = readMemories();
+      const memory = memories.find(item => item.id === savedHearts.value);
+      if (!memory) {
+        memoryStatus.textContent = "Choose a saved heart first.";
+        return;
+      }
+      const newName = heartName.value.trim() || window.prompt("New name for this saved heart:", memory.label);
+      if (!newName?.trim()) return;
+      memory.label = newName.trim();
+      writeMemories(memories);
+      refreshMemories();
+      savedHearts.value = memory.id;
+      heartName.value = memory.label;
+      memoryStatus.textContent = `Renamed to ${memory.label}.`;
+    });
+    document.querySelector("#deleteHeart").addEventListener("click", () => {
+      const memories = readMemories();
+      const memory = memories.find(item => item.id === savedHearts.value);
+      if (!memory) {
+        memoryStatus.textContent = "Choose a saved heart first.";
+        return;
+      }
+      if (!window.confirm(`Delete "${memory.label}"? This cannot be undone.`)) return;
+      writeMemories(memories.filter(item => item.id !== memory.id));
+      refreshMemories();
+      heartName.value = "";
+      memoryStatus.textContent = `${memory.label} was deleted.`;
     });
 
     document.querySelector("#express").addEventListener("click", () => render(infer(reply.value)));
