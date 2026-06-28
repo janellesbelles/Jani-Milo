@@ -143,6 +143,32 @@
     .cell.outlier { translate: var(--outlier-x, 0) var(--outlier-y, 0); }
     #heart[data-formation="grid"] { transform: none; }
 
+    .cell[data-role] {
+      outline: 1px solid rgba(255,255,255,.16);
+      outline-offset: 2px;
+    }
+    .cell[data-role="anchor"] {
+      box-shadow:
+        inset 0 1px 1px rgba(255,255,255,.28),
+        0 0 calc(18px * var(--strength)) color-mix(in srgb, var(--cell), transparent 50%),
+        0 12px 26px rgba(0,0,0,.34);
+      filter: saturate(.86) brightness(.9);
+    }
+    .cell[data-role="spark"] {
+      outline-color: rgba(255,236,166,.45);
+      box-shadow:
+        inset 0 1px 1px rgba(255,255,255,.42),
+        0 0 calc(34px * var(--strength)) color-mix(in srgb, var(--cell), transparent 35%);
+    }
+    .cell[data-role="guard"] {
+      outline-color: rgba(165,174,194,.28);
+      filter: saturate(.72) brightness(.78);
+    }
+    .cell[data-role="wanderer"] {
+      outline-color: rgba(210,185,255,.42);
+      border-radius: 24px;
+    }
+
     .cell::after {
       content: "";
       display: block;
@@ -676,6 +702,36 @@ intensity:</textarea>
       );
       return candidates.sort((a,b) => a.distance - b.distance)[0]?.motion || "";
     }
+
+    function rolePhrase(text, role) {
+      const line = text.split(/\r?\n/).find(item => new RegExp(`^\\s*${role}\\s*:`, "i").test(item));
+      if (line) return line.replace(new RegExp(`^\\s*${role}\\s*:\\s*`, "i"), "").toLowerCase();
+      return text.toLowerCase().match(new RegExp(`[^.\\n]{0,55}\\b${role}\\b[^.\\n]{0,95}`))?.[0] || "";
+    }
+
+    function inferRoles(text) {
+      const details = {};
+      for (const role of ["anchor", "spark", "guard", "wanderer"]) {
+        const phrase = rolePhrase(text, role);
+        if (!phrase) continue;
+        const absent = /\b(?:none|no|not right now|absent|missing|offline|asleep)\b/.test(phrase);
+        details[role] = {
+          present: !absent,
+          color: absent ? "" : colorFromWords(phrase),
+          motion: absent ? "" : motionFromWords(phrase, role === "anchor" || role === "guard" ? "still" : role === "spark" ? "shimmer" : "drift"),
+          faint: /\b(?:faint|ember|little|barely|low|small|dim)\b/.test(phrase),
+          strong: /\b(?:solid|watching|aware|strong|bright|charged)\b/.test(phrase),
+          phrase
+        };
+      }
+      return details;
+    }
+
+    function activeRoles(roleDetails) {
+      return Object.entries(roleDetails || {})
+        .filter(([, detail]) => detail?.present)
+        .map(([role]) => role);
+    }
     const arrangements = {
       center: [2,1,2,1, 1,0,0,2, 2,0,0,1, 1,2,1,2],
       rings: [2,2,2,2, 2,1,1,2, 2,1,1,2, 2,2,2,2],
@@ -742,7 +798,7 @@ intensity:</textarea>
         .replace(/\bpurples?\b/g, "violet")
         .replace(/\byellows?\b/g, "yellow");
       const orderedColors = colorWords
-        .map(c => ({ c, at: normalizedColorSource.indexOf(c) }))
+        .map(c => ({ c, at: normalizedColorSource.search(new RegExp(`\\b${c}s?\\b`)) }))
         .filter(item => item.at >= 0 && !(item.c === "grey" && /(?:charcoal|steel|iron)\s+gr[ae]y/.test(colorSource)))
         .sort((a, b) => a.at - b.at)
         .map(item => item.c);
@@ -786,9 +842,8 @@ intensity:</textarea>
       const edgeColor = colorNearestRole(lower, /\b(?:edges?|outer|shell|ring)\b/);
       const coreMotion = motionNearestRole(motionSource, /\b(?:core|center|centre|inner)\b/) || motionFromWords(corePhrase);
       const edgeMotion = motionNearestRole(motionSource, /\b(?:edges?|outer|shell|ring)\b/) || motionFromWords(edgePhrase);
-      const roles = ["anchor", "spark", "guard", "wanderer"].filter(role =>
-        new RegExp(`\\b(?:an?|one|the)\\s+(?:\\w+\\s+){0,2}${role}\\b`).test(lower)
-      );
+      const roleDetails = inferRoles(text);
+      const roles = activeRoles(roleDetails);
 
       const inferredMotion =
         motionGrammar.match(/breath/) && motionGrammar.match(/flutter|flit|delight/) ? "breathe-flutter" :
@@ -868,7 +923,8 @@ intensity:</textarea>
         edgeColor,
         coreMotion,
         edgeMotion,
-        roles
+        roles,
+        roleDetails
       };
     }
 
@@ -883,6 +939,7 @@ intensity:</textarea>
 
       [...heart.children].forEach((cell, i) => {
         cell.className = "cell";
+        cell.removeAttribute("data-role");
         cell.style.removeProperty("animation-name");
         cell.style.removeProperty("--cell-speed");
         cell.style.removeProperty("--outlier-x");
@@ -920,12 +977,29 @@ intensity:</textarea>
           cell.style.animationName = expression.accent.motion;
           cell.style.setProperty("--cell-speed", expression.accent.motion === "shimmer" ? "1.1s" : "2.8s");
         }
-        const roleMap = {anchor:5, spark:2, guard:0, wanderer:15};
-        const roleMotion = {anchor:"still", spark:"shimmer", guard:"pulse", wanderer:"drift"};
+        const roleZones = {anchor:[12], spark:[5], guard:[0,1,2,3], wanderer:[15]};
+        const roleFallbackMotion = {anchor:"still", spark:"shimmer", guard:"still", wanderer:"drift"};
+        for (const [role, detail] of Object.entries(expression.roleDetails || {})) {
+          if (!detail?.present || !roleZones[role]?.includes(i) || !awake.has(i)) continue;
+          if (detail.color) applySpecialColor(detail.color);
+          cell.dataset.role = role;
+          cell.style.animationName = detail.motion || roleFallbackMotion[role];
+          if (role === "spark") {
+            cell.style.setProperty("--cell-speed", detail.faint ? "4.8s" : "1.25s");
+            if (detail.faint) cell.style.setProperty("--cell-opacity", Math.max(.28, normalOpacity * .68));
+          } else if (role === "anchor") {
+            cell.style.setProperty("--cell-speed", "9s");
+            cell.style.setProperty("--cell-opacity", Math.max(.45, normalOpacity * (detail.strong ? 1 : .88)));
+          } else if (role === "guard") {
+            cell.style.setProperty("--cell-speed", detail.strong ? "6.2s" : "10s");
+          } else if (role === "wanderer") {
+            cell.style.setProperty("--cell-speed", "6.8s");
+          }
+        }
         for (const role of expression.roles || []) {
-          if (i === roleMap[role]) {
+          if (!expression.roleDetails && ({anchor:5, spark:2, guard:0, wanderer:15})[role] === i) {
             cell.dataset.role = role;
-            cell.style.animationName = roleMotion[role];
+            cell.style.animationName = ({anchor:"still", spark:"shimmer", guard:"pulse", wanderer:"drift"})[role];
           }
         }
         if (expression.hasOutlier && i === awakeOrder[Math.min((expression.activeCount ?? 16) - 1, 15)]) {
