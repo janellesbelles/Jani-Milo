@@ -168,6 +168,13 @@
       outline-color: rgba(210,185,255,.42);
       border-radius: 24px;
     }
+    .cell.single-light {
+      outline: 1px solid rgba(255,236,166,.42);
+      outline-offset: 3px;
+      box-shadow:
+        inset 0 1px 1px rgba(255,255,255,.42),
+        0 0 calc(32px * var(--strength)) color-mix(in srgb, var(--cell), transparent 38%);
+    }
 
     .cell::after {
       content: "";
@@ -780,7 +787,7 @@ intensity:</textarea>
       const lower = text.toLowerCase();
       const fields = {};
       for (const line of text.split(/\r?\n/)) {
-        const match = line.match(/^\s*(colors?|arrangement|pattern|movement|motion|speed|rhythm|brightness|intensity)\s*:\s*(.+)$/i);
+        const match = line.match(/^\s*(?:[-*]\s*)?(?:\*\*)?\s*(colors?|arrangement|pattern|movement|motion|speed|rhythm|brightness|intensity)\s*(?:\*\*)?\s*:\s*(.+)$/i);
         if (match) fields[match[1].toLowerCase()] = match[2].trim().toLowerCase();
       }
       const field = (...names) => names.map(name => fields[name]).find(Boolean) || "";
@@ -793,6 +800,7 @@ intensity:</textarea>
       const normalizedColorSource = colorSource
         .replace(/neon\s+pink/g, "neonpink")
         .replace(/espresso(?:\s+brown)?/g, "brown")
+        .replace(/indigo\s+blue/g, "indigo")
         .replace(/slate\s+blue/g, "slate")
         .replace(/(?:steel|iron)\s+gr[ae]y/g, "iron")
         .replace(/\bpurples?\b/g, "violet")
@@ -814,13 +822,15 @@ intensity:</textarea>
       if (colorSource.match(/iron\s+gr[ae]y|steel\s+gr[ae]y/)) orderedColors.push("iron");
 
       const countWord = "(?:one|two|three|four|five|six|a few|few|several|couple|\\d+)";
+      const accentDescriptor = "(?:(?:faint|single|lone|one|tiny|small|quiet|bright|brighter|glowing|special|specific|little)\\s+){0,4}";
       const accentMotionWord = "(?:flickering|flashing|sparkling|shimmering|fluttering|pulsing)";
       const colorWord = `(?:${colorWords.join("|")}|purple|pink|orange|yellows?)`;
       const accentMatch =
-        normalizedColorSource.match(new RegExp(`(${countWord})\\s+(${accentMotionWord}\\s+)?(${colorWord})(?:\\s+(?:lights?|sparks?|accents?|troublemakers?))?`)) ||
+        normalizedColorSource.match(new RegExp(`(${countWord})\\s+(${accentMotionWord}\\s+)?${accentDescriptor}(${colorWord})(?:\\s+(?:lights?|sparks?|accents?|troublemakers?))?`)) ||
         normalizedColorSource.match(new RegExp(`(${accentMotionWord})\\s+(${colorWord})(?:\\s+(?:lights?|sparks?|accents?))?`));
       let accent = null;
       if (accentMatch) {
+        const accentContext = lower.slice(Math.max(0, accentMatch.index - 90), Math.min(lower.length, accentMatch.index + accentMatch[0].length + 180));
         const countText = accentMatch[1];
         const motionText = accentMatch[2] || accentMatch[1] || "";
         const colorText = accentMatch[3] || accentMatch[2] || "";
@@ -829,7 +839,11 @@ intensity:</textarea>
         accent = {
           color: colorFromWords(colorText),
           count: Math.max(1, Math.min(6, count)),
-          motion: motionFromWords(motionText, "shimmer")
+          motion: motionFromWords(motionText, "shimmer"),
+          single: count === 1 || /\b(?:single|lone|the one|one)\b/.test(accentContext),
+          faint: /\b(?:faint|dim|quiet|tiny|small|little)\b/.test(accentContext),
+          strong: /\b(?:brighter|brightest|burns|glowing|glows|specific|special)\b/.test(accentContext) ||
+            new RegExp(`\\b(?:the\\s+)?one\\s+${colorFromWords(colorText)}\\b[\\s\\S]{0,320}\\b(?:burns|brighter|brightest|glows|glowing)\\b`).test(lower)
         };
       }
       const uniqueColors = [...new Set(orderedColors)];
@@ -875,7 +889,9 @@ intensity:</textarea>
         patternSource.match(/center|inside|inner/) ? "center" : pattern.value;
 
       let inferredIntensity = Number(intensity.value);
-      const statedIntensity = intensitySource.match(/\d{1,3}/) || lower.match(/(\d{1,3})\s*(?:%|percent|intensity)/);
+      const statedIntensity = field("intensity").match(/\d{1,3}/) ||
+        lower.match(/(?:^|\n)\s*(?:[-*]\s*)?(?:\*\*)?\s*intensity\s*(?:\*\*)?\s*:\s*(?:maybe\s+)?(?:like\s+)?(\d{1,3})/i) ||
+        lower.match(/(\d{1,3})\s*(?:%|percent|intensity)/);
       if (statedIntensity) inferredIntensity = Math.max(20, Math.min(100, Number(statedIntensity[1] ?? statedIntensity[0])));
       if (!field("intensity") && lower.match(/intense|vivid|electric|fierce|blinding|glare/)) inferredIntensity = Math.max(inferredIntensity, 86);
       if (!field("intensity") && lower.match(/low intensity|faint|subtle|barely|quiet/)) inferredIntensity = Math.min(inferredIntensity, 38);
@@ -974,8 +990,12 @@ intensity:</textarea>
         if (expression.coreMotion && coreCells.includes(i)) cell.style.animationName = expression.coreMotion;
         if (expression.accent && accentCells.slice(0, expression.accent.count).includes(i) && awake.has(i)) {
           applySpecialColor(expression.accent.color);
+          cell.classList.add("single-light");
           cell.style.animationName = expression.accent.motion;
           cell.style.setProperty("--cell-speed", expression.accent.motion === "shimmer" ? "1.1s" : "2.8s");
+          if (expression.accent.single) cell.style.setProperty("--cell-speed", expression.accent.strong ? "2.2s" : "4.2s");
+          if (expression.accent.faint) cell.style.setProperty("--cell-opacity", Math.max(.42, normalOpacity * .74));
+          if (expression.accent.strong) cell.style.setProperty("--cell-opacity", Math.max(.72, normalOpacity * .96));
         }
         const roleZones = {anchor:[12], spark:[5], guard:[0,1,2,3], wanderer:[15]};
         const roleFallbackMotion = {anchor:"still", spark:"shimmer", guard:"still", wanderer:"drift"};
@@ -1041,7 +1061,7 @@ intensity:</textarea>
       if (expression.multiCluster) scoreNotes.push("independent clusters");
       if (expression.accentFlicker) scoreNotes.push("accent flickers");
       if (expression.organicSpacing) scoreNotes.push("organic spacing");
-      if (expression.accent) scoreNotes.push(`${expression.accent.count} ${expression.accent.color} accents`);
+      if (expression.accent) scoreNotes.push(expression.accent.single ? `one ${expression.accent.color} light` : `${expression.accent.count} ${expression.accent.color} accents`);
       if (expression.coreColor || expression.edgeColor) scoreNotes.push("regional colors");
       if (expression.roles?.length) scoreNotes.push(expression.roles.join(" + "));
       status.textContent = `${chosen.join(" · ")} / ${expression.pattern} / ${expression.intensity}%${scoreNotes.length ? ` / ${scoreNotes.join(" · ")}` : ""}`;
