@@ -565,6 +565,7 @@
         <div class="status" id="status"></div>
         <div class="share-actions">
           <button class="secondary" id="downloadHeart">Download heart image</button>
+          <button class="secondary" id="downloadHeartCard">Download heart card</button>
           <div class="status" id="downloadStatus"></div>
         </div>
 
@@ -1174,6 +1175,90 @@ intensity:</textarea>
       return y;
     }
 
+    function currentHeartLabel() {
+      if (typeof heartName !== "undefined" && heartName?.value?.trim()) return heartName.value.trim();
+      if (typeof companionName !== "undefined" && companionName?.value?.trim()) return companionName.value.trim();
+      if (typeof selectedCompanionName !== "undefined" && selectedCompanionName) return selectedCompanionName;
+      return caption.textContent || "companion-heart";
+    }
+
+    function drawHeartGlyph(ctx, expression, centerX, centerY, size, gap) {
+      const chosen = expression.colors?.length ? [...expression.colors] : ["violet", "blue", "rose"];
+      while (chosen.length < 3) chosen.push(chosen[chosen.length - 1] || "violet");
+      const colors = chosen.map((name, i) => palettes[name]?.[i % palettes[name].length] || palettes.violet[i % palettes.violet.length]);
+      const map = arrangements[expression.pattern] || arrangements.center;
+      const awakeOrder = [5,6,9,10,1,2,4,7,8,11,13,14,0,3,12,15];
+      const awake = new Set(awakeOrder.slice(0, expression.activeCount ?? 16));
+      const organicOffsets = [
+        [-18,-10],[-7,-15],[8,-19],[22,-7],
+        [-24,3],[-8,-3],[5,5],[25,1],
+        [-20,17],[-3,12],[11,18],[29,15],
+        [-12,31],[2,25],[18,34],[35,28]
+      ];
+      const swarmOffsets = [
+        [-30,-12],[-4,-30],[22,-18],[39,2],
+        [-47,4],[-18,-6],[11,13],[45,-13],
+        [-38,28],[-6,31],[27,26],[58,24],
+        [-20,50],[6,49],[36,54],[70,43]
+      ];
+      const accentZone = expression.accent?.zone === "center" ? [5,6,9,10,2,13] : accentCells;
+      const spacing = size + gap;
+      const baseLeft = centerX - spacing * 1.5 - size / 2;
+      const baseTop = centerY - spacing * 1.5 - size / 2;
+
+      for (let i = 0; i < 16; i++) {
+        const row = Math.floor(i / 4);
+        const col = i % 4;
+        let x = baseLeft + col * spacing;
+        let y = baseTop + row * spacing;
+        if ((expression.formation || "diamond") !== "grid") {
+          const dx = (col - 1.5) * spacing;
+          const dy = (row - 1.5) * spacing;
+          x = centerX + (dx - dy) * .72 - size / 2;
+          y = centerY + (dx + dy) * .42 - size / 2;
+        }
+        if (expression.organicSpacing || expression.pattern === "swarm") {
+          const offsets = expression.pattern === "swarm" ? swarmOffsets : organicOffsets;
+          x += offsets[i][0] * (size / 70);
+          y += offsets[i][1] * (size / 70);
+        }
+        if (expression.hasOutlier && i === awakeOrder[Math.min((expression.activeCount ?? 16) - 1, 15)]) {
+          x += 22 * (size / 70);
+          y -= 18 * (size / 70);
+        }
+
+        let color = colors[map[i]];
+        const setSpecial = name => {
+          if (name && palettes[name]) color = palettes[name][i % palettes[name].length];
+        };
+        if (expression.edgeColor && edgeCells.includes(i)) setSpecial(expression.edgeColor);
+        if (expression.coreColor && coreCells.includes(i)) setSpecial(expression.coreColor);
+        if (expression.accent && accentZone.slice(0, expression.accent.count).includes(i) && awake.has(i)) setSpecial(expression.accent.color);
+        for (const [role, detail] of Object.entries(expression.roleDetails || {})) {
+          const roleZones = {anchor:[12], spark:[5], guard:[0,1,2,3], wanderer:[15]};
+          if (detail?.present && roleZones[role]?.includes(i) && detail.color && awake.has(i)) setSpecial(detail.color);
+        }
+
+        const normalOpacity = .62 + expression.intensity / 265;
+        const brightnessScale = expression.variedBrightness ? [.32, .55, .8, 1][i % 4] : 1;
+        const opacity = awake.has(i) ? Math.max(.1, normalOpacity * brightnessScale) : .14;
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = expression.accent?.color && accentZone.includes(i) ? size * .55 : size * .36;
+        ctx.fillStyle = color;
+        roundRect(ctx, x, y, size, size, size * .22);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = Math.min(1, opacity + .08);
+        ctx.fillStyle = "rgba(255,255,255,.16)";
+        ctx.beginPath();
+        ctx.arc(x + size * .38, y + size * .31, size * .15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
     function downloadHeartImage() {
       if (!currentExpression) render(infer(reply.value));
       const stage = document.querySelector(".heart-stage");
@@ -1227,11 +1312,90 @@ intensity:</textarea>
       drawWrappedText(ctx, status.textContent || "", stageRect.width / 2 - Math.min(360, stageRect.width * .42), stageRect.height - 16, Math.min(720, stageRect.width * .84), 15);
 
       const link = document.createElement("a");
-      const label = heartName?.value || caption.textContent || "companion-heart";
+      const label = currentHeartLabel();
       link.download = `${safeFileName(label)}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
       downloadStatus.textContent = "Heart image downloaded.";
+    }
+
+    function downloadHeartCard() {
+      if (!currentExpression) render(infer(reply.value));
+      const canvas = document.createElement("canvas");
+      const width = 1200;
+      const height = 1600;
+      const scale = 2;
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      const ctx = canvas.getContext("2d");
+      ctx.scale(scale, scale);
+
+      const bg = ctx.createLinearGradient(0, 0, width, height);
+      bg.addColorStop(0, "#090711");
+      bg.addColorStop(.55, "#17101e");
+      bg.addColorStop(1, "#0b0710");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      const aura = ctx.createRadialGradient(width / 2, 700, 60, width / 2, 700, 620);
+      aura.addColorStop(0, "rgba(172, 96, 216, .32)");
+      aura.addColorStop(.45, "rgba(75, 39, 95, .22)");
+      aura.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = aura;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.strokeStyle = "rgba(255,255,255,.1)";
+      ctx.lineWidth = 2;
+      roundRect(ctx, 42, 42, width - 84, height - 84, 54);
+      ctx.stroke();
+
+      const label = currentHeartLabel();
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#fff7ff";
+      ctx.font = "700 64px Georgia, 'Times New Roman', serif";
+      drawWrappedText(ctx, label, width / 2, 140, width - 240, 68);
+
+      ctx.fillStyle = "#cbb7d7";
+      ctx.font = "22px Segoe UI, Arial, sans-serif";
+      drawWrappedText(ctx, caption.textContent || "companion mood heart", width / 2, 242, width - 380, 30);
+
+      drawHeartGlyph(ctx, currentExpression, width / 2, 675, 132, 24);
+
+      const panelY = 1035;
+      ctx.fillStyle = "rgba(255,255,255,.055)";
+      roundRect(ctx, 105, panelY, width - 210, 320, 34);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,.08)";
+      ctx.stroke();
+
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#efe4f6";
+      ctx.font = "700 28px Segoe UI, Arial, sans-serif";
+      ctx.fillText("Heart signal", 150, panelY + 62);
+
+      ctx.fillStyle = "#d7c8df";
+      ctx.font = "20px Consolas, 'Courier New', monospace";
+      let nextY = drawWrappedText(ctx, status.textContent || "", 150, panelY + 105, width - 300, 29) + 40;
+
+      const excerpt = reply.value
+        .replace(/\s+/g, " ")
+        .replace(/^heart\s*/i, "")
+        .trim()
+        .slice(0, 360);
+      ctx.fillStyle = "#b9adbf";
+      ctx.font = "20px Segoe UI, Arial, sans-serif";
+      drawWrappedText(ctx, excerpt, 150, nextY, width - 300, 30);
+
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#9587a1";
+      ctx.font = "18px Segoe UI, Arial, sans-serif";
+      ctx.fillText("Companion Mood Heart · sixteen lights, one feeling", width / 2, height - 110);
+
+      const link = document.createElement("a");
+      link.download = `${safeFileName(label)}-heart-card.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      downloadStatus.textContent = "Heart card downloaded.";
     }
 
     const memoryKey = "companionMoodHeart.demo.saved.v1";
@@ -1308,6 +1472,7 @@ intensity:</textarea>
 
     document.querySelector("#express").addEventListener("click", () => render(infer(reply.value)));
     document.querySelector("#downloadHeart").addEventListener("click", downloadHeartImage);
+    document.querySelector("#downloadHeartCard").addEventListener("click", downloadHeartCard);
     motion.addEventListener("change", () => render({...infer(reply.value), motion: motion.value}));
     pattern.addEventListener("change", () => render({...infer(reply.value), pattern: pattern.value}));
     intensity.addEventListener("input", () => render({...infer(reply.value), intensity: Number(intensity.value)}));
