@@ -201,6 +201,7 @@
     #heart.breathe-flutter .cell { animation-name: breathe-flutter; }
     #heart.undulate .cell { animation-name: undulate; }
     #heart.weighted .cell { animation-name: weighted; }
+    #heart.glitch .cell { animation-name: glitch; }
     #heart.still .cell { animation: none; }
 
     @keyframes breathe {
@@ -278,6 +279,15 @@
       0%, 18% { transform: scale(.88); filter: brightness(.82); }
       38%, 68% { transform: scale(1.08); filter: brightness(1.18); }
       82%, 100% { transform: scale(.92); filter: brightness(.9); }
+    }
+    @keyframes glitch {
+      0%, 17%, 100% { transform: translate(0,0) scale(.86); filter: brightness(.72) contrast(1.05); opacity: .7; }
+      21% { transform: translate(5px,-4px) scale(1.12); filter: brightness(1.7) contrast(1.45); opacity: 1; }
+      24% { transform: translate(-4px,3px) scale(.92); filter: brightness(.55) contrast(1.2); opacity: .46; }
+      29% { transform: translate(2px,-2px) scale(1.04); filter: brightness(1.25) contrast(1.35); opacity: .88; }
+      52% { transform: translate(0,0) scale(.78); filter: brightness(.48) contrast(1.05); opacity: .42; }
+      68% { transform: translate(-6px,5px) scale(1.16); filter: brightness(1.9) contrast(1.65); opacity: 1; }
+      73% { transform: translate(3px,-1px) scale(.84); filter: brightness(.6) contrast(1.2); opacity: .52; }
     }
 
     .mood-caption {
@@ -530,6 +540,7 @@
               <option value="breathe-flutter">Breathe + flutter</option>
               <option value="undulate">Gentle undulation</option>
               <option value="weighted">Weighted pauses</option>
+              <option value="glitch">Glitch heartbeat</option>
               <option value="still">Stillness</option>
             </select>
           </div>
@@ -542,6 +553,7 @@
               <option value="scatter">Constellation</option>
               <option value="layered">Layered</option><option value="edges">Edges to center</option>
               <option value="split">Split</option><option value="waves">Waves</option><option value="clusters">Clusters</option>
+              <option value="swarm">Chaotic swarm</option>
             </select>
           </div>
         </div>
@@ -653,13 +665,16 @@ intensity:</textarea>
       green: ["#60cba0", "#49a98f", "#9adeb8"],
       red: ["#f35d69", "#d54259", "#ff8b8b"],
       silver: ["#c9ccdc", "#9ea9c3", "#e5dcf1"],
+      neonwhite: ["#ffffff", "#f8fbff", "#eaf2ff"],
+      obsidian: ["#05050a", "#111018", "#190b24"],
       dark: ["#342b4f", "#262b52", "#49325e"]
     };
 
     const colorWords = Object.keys(palettes);
     const colorAliases = {
       purple: "violet", yellow: "yellow", yellows: "yellow",
-      pink: "rose", orange: "gold", espresso: "brown"
+      pink: "rose", orange: "gold", espresso: "brown",
+      neon: "neonwhite", obsidian: "obsidian"
     };
     const numberWords = { one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10, eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16 };
     const coreCells = [5,6,9,10];
@@ -670,6 +685,8 @@ intensity:</textarea>
     function colorFromWords(words) {
       const normalized = words
         .replace(/neon\s+pink/g, "neonpink")
+        .replace(/neon\s+white/g, "neonwhite")
+        .replace(/deep\s+obsidian/g, "obsidian")
         .replace(/espresso(?:\s+brown)?/g, "brown")
         .replace(/slate\s+blue/g, "slate")
         .replace(/(?:steel|iron)\s+gr[ae]y/g, "iron");
@@ -686,7 +703,8 @@ intensity:</textarea>
     }
 
     function motionFromWords(words, fallback = "") {
-      return /flicker|flash|spark|shimmer|glitter/.test(words) ? "shimmer" :
+      return /glitch|erratic|jagged|can't find|cant find|unpredictable/.test(words) ? "glitch" :
+        /flicker|flash|spark|shimmer|glitter/.test(words) ? "shimmer" :
         /drift|wander|float/.test(words) ? "drift" :
         /flutter|flit/.test(words) ? "flutter" :
         /pulse|heartbeat|beat/.test(words) ? "pulse" :
@@ -695,12 +713,15 @@ intensity:</textarea>
     }
 
     function colorNearestRole(words, rolePattern) {
-      const role = words.match(rolePattern);
+      const normalized = words
+        .replace(/neon\s+white/g, "neonwhite")
+        .replace(/deep\s+obsidian/g, "obsidian");
+      const role = normalized.match(rolePattern);
       if (!role || role.index == null) return "";
       const candidates = [...colorWords, ...Object.keys(colorAliases)].flatMap(color => {
         const matches = [];
         const regex = new RegExp(`\\b${color}s?\\b`, "g");
-        for (const match of words.matchAll(regex)) {
+        for (const match of normalized.matchAll(regex)) {
           matches.push({color: palettes[color] ? color : colorAliases[color], distance: Math.abs(match.index - role.index)});
         }
         return matches;
@@ -712,6 +733,7 @@ intensity:</textarea>
       const role = words.match(rolePattern);
       if (!role || role.index == null) return "";
       const motions = [
+        {pattern:/glitch|erratic|jagged|can't find|cant find|unpredictable/g, motion:"glitch"},
         {pattern:/flicker|flash|spark|shimmer|glitter/g, motion:"shimmer"},
         {pattern:/drift|wander|float/g, motion:"drift"},
         {pattern:/flutter|flit/g, motion:"flutter"},
@@ -763,7 +785,8 @@ intensity:</textarea>
       edges: [1,1,1,1, 1,2,2,1, 1,2,2,1, 1,1,1,1],
       split: [0,0,1,1, 0,0,1,1, 0,0,1,1, 0,0,1,1],
       waves: [0,1,2,1, 1,2,1,0, 2,1,0,1, 1,0,1,2],
-      clusters: [0,0,2,2, 0,1,2,2, 1,1,0,0, 2,1,0,1]
+      clusters: [0,0,2,2, 0,1,2,2, 1,1,0,0, 2,1,0,1],
+      swarm: [0,2,0,1, 2,0,1,2, 0,1,0,2, 1,0,2,0]
     };
 
     const seeds = {
@@ -814,6 +837,8 @@ intensity:</textarea>
       const motionGrammar = `${motionSource} ${speedSource}`;
       const normalizedColorSource = colorSource
         .replace(/neon\s+pink/g, "neonpink")
+        .replace(/neon\s+white/g, "neonwhite")
+        .replace(/deep\s+obsidian/g, "obsidian")
         .replace(/espresso(?:\s+brown)?/g, "brown")
         .replace(/indigo\s+blue/g, "indigo")
         .replace(/slate\s+blue/g, "slate")
@@ -828,18 +853,20 @@ intensity:</textarea>
       if (colorSource.match(/neon\s+pink/)) orderedColors.push("neonpink");
       else if (lower.includes("pink")) orderedColors.push("rose");
       if (lower.includes("purple")) orderedColors.push("violet");
-      if (lower.includes("orange") || lower.includes("warm")) orderedColors.push("gold");
+      if (/\b(?:orange|warm)\b/.test(lower)) orderedColors.push("gold");
       if (colorSource.includes("gray")) orderedColors.push("grey");
       if (colorSource.includes("deep red")) orderedColors.push("crimson");
       if (colorSource.match(/espresso|coffee|brown/)) orderedColors.push("brown");
       if (colorSource.match(/cream|ivory/)) orderedColors.push("cream");
       if (colorSource.match(/slate\s+blue/)) orderedColors.push("slate");
       if (colorSource.match(/iron\s+gr[ae]y|steel\s+gr[ae]y/)) orderedColors.push("iron");
+      if (colorSource.match(/obsidian|near[-\s]?black|inky black/)) orderedColors.push("obsidian");
+      if (colorSource.match(/neon\s+white|jagged\s+white|blinding\s+white/)) orderedColors.push("neonwhite");
 
       const countWord = "(?:one|two|three|four|five|six|a few|few|several|couple|\\d+)";
-      const accentDescriptor = "(?:(?:faint|single|lone|one|tiny|small|quiet|bright|brighter|glowing|special|specific|little)\\s+){0,4}";
-      const accentMotionWord = "(?:flickering|flashing|sparkling|shimmering|fluttering|pulsing)";
-      const colorWord = `(?:${colorWords.join("|")}|purple|pink|orange|yellows?)`;
+      const accentDescriptor = "(?:(?:faint|single|lone|one|tiny|small|quiet|bright|brighter|glowing|special|specific|little|jagged|blinding|neon)\\s+){0,5}";
+      const accentMotionWord = "(?:flickering|flashing|sparkling|shimmering|fluttering|pulsing|jumping|glitching)";
+      const colorWord = `(?:${colorWords.join("|")}|purple|pink|orange|yellows?|neonwhite|neon\\s+white)`;
       const accentMatch =
         normalizedColorSource.match(new RegExp(`(${countWord})\\s+(${accentMotionWord}\\s+)?${accentDescriptor}(${colorWord})(?:\\s+(?:lights?|sparks?|accents?|troublemakers?))?`)) ||
         normalizedColorSource.match(new RegExp(`(${accentMotionWord})\\s+(${colorWord})(?:\\s+(?:lights?|sparks?|accents?))?`));
@@ -861,20 +888,34 @@ intensity:</textarea>
             new RegExp(`\\b(?:the\\s+)?one\\s+${colorFromWords(colorText)}\\b[\\s\\S]{0,320}\\b(?:burns|brighter|brightest|glows|glowing)\\b`).test(lower)
         };
       }
+      if (!accent && /(?:flashes?|sparks?|jagged|jumping|blinding)[\s\S]{0,55}(?:neonwhite|neon\s+white|white)|(?:neonwhite|neon\s+white|white)[\s\S]{0,55}(?:sparks?|flashes?|accents?)/.test(`${normalizedColorSource} ${lower}`)) {
+        accent = {
+          color: /neonwhite|neon\s+white|white/.test(normalizedColorSource) ? "neonwhite" : colorFromWords(normalizedColorSource),
+          count: 4,
+          motion: "glitch",
+          single: false,
+          faint: false,
+          strong: true,
+          zone: /\b(?:center|centre|core|middle)\b/.test(patternSource) ? "center" : ""
+        };
+      }
       const uniqueColors = [...new Set(orderedColors)];
+      const accentFamily = accent?.color === "neonwhite" ? ["neonwhite", "white"] : [accent?.color];
       const baseColors = accent?.color && uniqueColors.length > 1
-        ? uniqueColors.filter(color => color !== accent.color)
+        ? uniqueColors.filter(color => !accentFamily.includes(color))
         : uniqueColors;
       const corePhrase = lower.match(/[^.\n]{0,35}\b(?:core|center|centre|inner)\b[^.\n]{0,55}/)?.[0] || "";
       const edgePhrase = lower.match(/[^.\n]{0,35}\b(?:edges?|outer|shell|ring)\b[^.\n]{0,55}/)?.[0] || "";
-      const coreColor = colorNearestRole(lower, /\b(?:core|center|centre|inner)\b/);
-      const edgeColor = colorNearestRole(lower, /\b(?:edges?|outer|shell|ring)\b/);
+      let coreColor = colorFromWords(corePhrase) || colorNearestRole(lower, /\b(?:core|center|centre|inner)\b/);
+      if (accent?.zone === "center" && /\b(?:sparks?|flashes?|jumping|jagged|blinding)\b/.test(corePhrase)) coreColor = "";
+      const edgeColor = colorFromWords(edgePhrase) || colorNearestRole(lower, /\b(?:edges?|outer|shell|ring)\b/);
       const coreMotion = motionNearestRole(motionSource, /\b(?:core|center|centre|inner)\b/) || motionFromWords(corePhrase);
       const edgeMotion = motionNearestRole(motionSource, /\b(?:edges?|outer|shell|ring)\b/) || motionFromWords(edgePhrase);
       const roleDetails = inferRoles(text);
       const roles = activeRoles(roleDetails);
 
       const inferredMotion =
+        motionGrammar.match(/glitch|erratic|unpredictable|can't find|cant find|fast bursts|heavy stillness/) ? "glitch" :
         motionGrammar.match(/breath/) && motionGrammar.match(/flutter|flit|delight/) ? "breathe-flutter" :
         motionGrammar.match(/weighted pause|deliberate pause|held pause/) ? "weighted" :
         motionGrammar.match(/breath/) && motionGrammar.match(/flicker|flash|spike|burst/) ? "breathe" :
@@ -893,6 +934,7 @@ intensity:</textarea>
         motionSource.match(/soft|gentle|slow/) ? "breathe" : motion.value;
 
       const inferredPattern =
+        patternSource.match(/chaotic swarm|swarm|jumping randomly/) ? "swarm" :
         patternSource.match(/edge.*center|outside.*inside|bleed.*center/) ? "edges" :
         patternSource.match(/layer/) ? "layered" :
         patternSource.match(/split|half|divide/) ? "split" :
@@ -923,14 +965,15 @@ intensity:</textarea>
       const cyclesMatch = speedSource.match(/(\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:cycles?|pulses?|beats?)\s+per\s+minute/);
       const cyclesValue = cyclesMatch ? (numberWords[cyclesMatch[1]] || Number(cyclesMatch[1])) : null;
       const cyclesPerMinute = cyclesValue ? Math.max(.25, cyclesValue) : null;
-      const variedBrightness = /some lights?.*(?:blinding|bright).*(?:others?|the rest).*(?:barely|dim|faint)|varying brightness|different brightness/i.test(lower);
-      const accentFlicker = /occasional|sudden|sharp|brief/.test(motionGrammar) && /flicker|flash|spike|burst/.test(motionGrammar);
+      const variedBrightness = /dim overall|overall.*dim|some lights?.*(?:blinding|bright).*(?:others?|the rest).*(?:barely|dim|faint)|varying brightness|different brightness/i.test(lower);
+      const accentFlicker = /jagged|jumping|glitch|erratic|occasional|sudden|sharp|brief/.test(motionGrammar) && /spark|flicker|flash|spike|burst|white/.test(`${motionGrammar} ${colorSource}`);
       const multiCluster = /(?:two|2|separate|independent|different)\s+clusters?|clusters?.*(?:different|separate|independent)/.test(patternSource);
       const hasOutlier = /one (?:light )?(?:offset|outside|apart|rebellious|out of formation)|single (?:light )?(?:offset|outside|apart)/.test(lower);
       const rejectsGrid = /(?:no|not|without|avoid)\s+(?:a\s+)?(?:rigid|strict|perfect)?\s*grid/.test(patternSource);
       const formation = !rejectsGrid && /rigid grid|strict grid|perfect grid/.test(patternSource) ? "grid" : "diamond";
       const organicSpacing =
-        /organic|natural(?:ly)?|irregular|uneven|asymmetr/.test(patternSource) ||
+        inferredPattern === "swarm" ||
+        /organic|natural(?:ly)?|irregular|uneven|asymmetr|chaotic/.test(patternSource) ||
         /some lights?.*(?:closer|cluster).*(?:others?|the rest).*(?:farther|further|drift|apart)/.test(patternSource) ||
         rejectsGrid;
 
@@ -1003,7 +1046,8 @@ intensity:</textarea>
         }
         if (expression.edgeMotion && edgeCells.includes(i)) cell.style.animationName = expression.edgeMotion;
         if (expression.coreMotion && coreCells.includes(i)) cell.style.animationName = expression.coreMotion;
-        if (expression.accent && accentCells.slice(0, expression.accent.count).includes(i) && awake.has(i)) {
+        const accentZone = expression.accent?.zone === "center" ? [5,6,9,10,2,13] : accentCells;
+        if (expression.accent && accentZone.slice(0, expression.accent.count).includes(i) && awake.has(i)) {
           applySpecialColor(expression.accent.color);
           cell.classList.add("single-light");
           cell.style.animationName = expression.accent.motion;
@@ -1053,6 +1097,16 @@ intensity:</textarea>
           const outlierBoost = cell.classList.contains("outlier") ? 18 : 0;
           cell.style.translate = `${x + outlierBoost}px ${y - outlierBoost}px`;
         }
+        if (expression.pattern === "swarm") {
+          const swarmOffsets = [
+            [-30,-12],[-4,-30],[22,-18],[39,2],
+            [-47,4],[-18,-6],[11,13],[45,-13],
+            [-38,28],[-6,31],[27,26],[58,24],
+            [-20,50],[6,49],[36,54],[70,43]
+          ];
+          const [x, y] = swarmOffsets[i];
+          cell.style.translate = `${x}px ${y}px`;
+        }
       });
 
       heart.className = expression.motion;
@@ -1075,6 +1129,7 @@ intensity:</textarea>
       if ((expression.activeCount ?? 16) < 16) scoreNotes.push(`${expression.activeCount} awake`);
       if (expression.multiCluster) scoreNotes.push("independent clusters");
       if (expression.accentFlicker) scoreNotes.push("accent flickers");
+      if (expression.motion === "glitch") scoreNotes.push("glitch rhythm");
       if (expression.organicSpacing) scoreNotes.push("organic spacing");
       if (expression.accent) scoreNotes.push(expression.accent.single ? `one ${expression.accent.color} light` : `${expression.accent.count} ${expression.accent.color} accents`);
       if (expression.coreColor || expression.edgeColor) scoreNotes.push("regional colors");
