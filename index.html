@@ -396,6 +396,16 @@
       text-align: center;
     }
 
+    .share-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .share-actions button {
+      margin-top: 0;
+    }
+
     .heart-memory {
       margin-top: 18px;
       padding-top: 18px;
@@ -541,6 +551,10 @@
 
         <button id="express">Express this feeling</button>
         <div class="status" id="status"></div>
+        <div class="share-actions">
+          <button class="secondary" id="downloadHeart">Download heart image</button>
+          <div class="status" id="downloadStatus"></div>
+        </div>
 
         <div class="examples">
           <span>Try an emotional seed</span>
@@ -614,6 +628,7 @@ intensity:</textarea>
     const heartName = document.querySelector("#heartName");
     const savedHearts = document.querySelector("#savedHearts");
     const memoryStatus = document.querySelector("#memoryStatus");
+    const downloadStatus = document.querySelector("#downloadStatus");
 
     const palettes = {
       rose: ["#ff7dac", "#f9a2bd", "#d85c98"],
@@ -1067,6 +1082,103 @@ intensity:</textarea>
       status.textContent = `${chosen.join(" · ")} / ${expression.pattern} / ${expression.intensity}%${scoreNotes.length ? ` / ${scoreNotes.join(" · ")}` : ""}`;
     }
 
+    function safeFileName(text) {
+      return (text || "companion-heart")
+        .replace(/[^\w\s-]/g, "")
+        .trim()
+        .replace(/\s+/g, "-")
+        .slice(0, 70)
+        .toLowerCase() || "companion-heart";
+    }
+
+    function roundRect(ctx, x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + width, y, x + width, y + height, r);
+      ctx.arcTo(x + width, y + height, x, y + height, r);
+      ctx.arcTo(x, y + height, x, y, r);
+      ctx.arcTo(x, y, x + r, y, r);
+      ctx.closePath();
+    }
+
+    function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight) {
+      const words = String(text || "").split(/\s+/);
+      let line = "";
+      for (const word of words) {
+        const test = line ? `${line} ${word}` : word;
+        if (ctx.measureText(test).width > maxWidth && line) {
+          ctx.fillText(line, x, y);
+          line = word;
+          y += lineHeight;
+        } else {
+          line = test;
+        }
+      }
+      if (line) ctx.fillText(line, x, y);
+      return y;
+    }
+
+    function downloadHeartImage() {
+      if (!currentExpression) render(infer(reply.value));
+      const stage = document.querySelector(".heart-stage");
+      const stageRect = stage.getBoundingClientRect();
+      const scale = 2;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(stageRect.width * scale);
+      canvas.height = Math.round(stageRect.height * scale);
+      const ctx = canvas.getContext("2d");
+      ctx.scale(scale, scale);
+
+      const bg = ctx.createRadialGradient(stageRect.width / 2, stageRect.height / 2, 35, stageRect.width / 2, stageRect.height / 2, stageRect.width * .65);
+      bg.addColorStop(0, "rgba(72, 39, 94, .42)");
+      bg.addColorStop(1, "rgba(18, 14, 25, 1)");
+      ctx.fillStyle = bg;
+      roundRect(ctx, 0, 0, stageRect.width, stageRect.height, 28);
+      ctx.fill();
+
+      const cells = [...heart.children];
+      for (const cell of cells) {
+        const rect = cell.getBoundingClientRect();
+        const styles = getComputedStyle(cell);
+        const x = rect.left - stageRect.left;
+        const y = rect.top - stageRect.top;
+        const w = rect.width;
+        const h = rect.height;
+        const color = styles.getPropertyValue("--cell").trim() || styles.backgroundColor || "#d88cff";
+        const opacity = Number(styles.opacity || 1);
+        ctx.save();
+        ctx.globalAlpha = Math.max(.08, opacity);
+        ctx.shadowColor = color;
+        ctx.shadowBlur = cell.classList.contains("single-light") ? 30 : 20;
+        ctx.fillStyle = color;
+        roundRect(ctx, x, y, w, h, 18);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = Math.min(1, opacity + .08);
+        ctx.fillStyle = "rgba(255,255,255,.14)";
+        ctx.beginPath();
+        ctx.arc(x + w * .38, y + h * .31, Math.min(w, h) * .16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.fillStyle = "#d7cce0";
+      ctx.textAlign = "center";
+      ctx.font = "14px Segoe UI, Arial, sans-serif";
+      ctx.fillText(caption.textContent || "companion mood heart", stageRect.width / 2, stageRect.height - 36);
+      ctx.fillStyle = "#a99ab4";
+      ctx.font = "12px Consolas, 'Courier New', monospace";
+      drawWrappedText(ctx, status.textContent || "", stageRect.width / 2 - Math.min(360, stageRect.width * .42), stageRect.height - 16, Math.min(720, stageRect.width * .84), 15);
+
+      const link = document.createElement("a");
+      const label = heartName?.value || caption.textContent || "companion-heart";
+      link.download = `${safeFileName(label)}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      downloadStatus.textContent = "Heart image downloaded.";
+    }
+
     const memoryKey = "companionMoodHeart.demo.saved.v1";
     const readMemories = () => {
       try { return JSON.parse(localStorage.getItem(memoryKey) || "[]"); }
@@ -1140,6 +1252,7 @@ intensity:</textarea>
     });
 
     document.querySelector("#express").addEventListener("click", () => render(infer(reply.value)));
+    document.querySelector("#downloadHeart").addEventListener("click", downloadHeartImage);
     motion.addEventListener("change", () => render({...infer(reply.value), motion: motion.value}));
     pattern.addEventListener("change", () => render({...infer(reply.value), pattern: pattern.value}));
     intensity.addEventListener("input", () => render({...infer(reply.value), intensity: Number(intensity.value)}));
