@@ -1261,55 +1261,38 @@ intensity:</textarea>
 
     function downloadHeartImage() {
       if (!currentExpression) render(infer(reply.value));
-      const stage = document.querySelector(".heart-stage");
-      const stageRect = stage.getBoundingClientRect();
+      const width = 1200;
+      const height = 1200;
       const scale = 2;
       const canvas = document.createElement("canvas");
-      canvas.width = Math.round(stageRect.width * scale);
-      canvas.height = Math.round(stageRect.height * scale);
+      canvas.width = width * scale;
+      canvas.height = height * scale;
       const ctx = canvas.getContext("2d");
       ctx.scale(scale, scale);
 
-      const bg = ctx.createRadialGradient(stageRect.width / 2, stageRect.height / 2, 35, stageRect.width / 2, stageRect.height / 2, stageRect.width * .65);
-      bg.addColorStop(0, "rgba(72, 39, 94, .42)");
-      bg.addColorStop(1, "rgba(18, 14, 25, 1)");
+      const bg = ctx.createRadialGradient(width / 2, height * .48, 60, width / 2, height * .48, width * .72);
+      bg.addColorStop(0, "rgba(86, 44, 116, .44)");
+      bg.addColorStop(.48, "rgba(30, 18, 42, 1)");
+      bg.addColorStop(1, "rgba(12, 9, 18, 1)");
       ctx.fillStyle = bg;
-      roundRect(ctx, 0, 0, stageRect.width, stageRect.height, 28);
+      roundRect(ctx, 0, 0, width, height, 46);
       ctx.fill();
 
-      const cells = [...heart.children];
-      for (const cell of cells) {
-        const rect = cell.getBoundingClientRect();
-        const styles = getComputedStyle(cell);
-        const x = rect.left - stageRect.left;
-        const y = rect.top - stageRect.top;
-        const w = rect.width;
-        const h = rect.height;
-        const color = styles.getPropertyValue("--cell").trim() || styles.backgroundColor || "#d88cff";
-        const opacity = Number(styles.opacity || 1);
-        ctx.save();
-        ctx.globalAlpha = Math.max(.08, opacity);
-        ctx.shadowColor = color;
-        ctx.shadowBlur = cell.classList.contains("single-light") ? 30 : 20;
-        ctx.fillStyle = color;
-        roundRect(ctx, x, y, w, h, 18);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.globalAlpha = Math.min(1, opacity + .08);
-        ctx.fillStyle = "rgba(255,255,255,.14)";
-        ctx.beginPath();
-        ctx.arc(x + w * .38, y + h * .31, Math.min(w, h) * .16, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
+      const aura = ctx.createRadialGradient(width / 2, height * .48, 40, width / 2, height * .48, 455);
+      aura.addColorStop(0, "rgba(216, 140, 255, .22)");
+      aura.addColorStop(1, "rgba(216, 140, 255, 0)");
+      ctx.fillStyle = aura;
+      ctx.fillRect(0, 0, width, height);
+
+      drawHeartGlyph(ctx, currentExpression, width / 2, 520, 118, 22);
 
       ctx.fillStyle = "#d7cce0";
       ctx.textAlign = "center";
-      ctx.font = "14px Segoe UI, Arial, sans-serif";
-      ctx.fillText(caption.textContent || "companion mood heart", stageRect.width / 2, stageRect.height - 36);
+      ctx.font = "24px Segoe UI, Arial, sans-serif";
+      drawWrappedText(ctx, caption.textContent || "companion mood heart", width / 2, 930, width - 220, 32);
       ctx.fillStyle = "#a99ab4";
-      ctx.font = "12px Consolas, 'Courier New', monospace";
-      drawWrappedText(ctx, status.textContent || "", stageRect.width / 2 - Math.min(360, stageRect.width * .42), stageRect.height - 16, Math.min(720, stageRect.width * .84), 15);
+      ctx.font = "19px Consolas, 'Courier New', monospace";
+      drawWrappedText(ctx, status.textContent || "", width / 2, 990, width - 260, 28);
 
       const link = document.createElement("a");
       const label = currentHeartLabel();
