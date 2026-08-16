@@ -1179,7 +1179,34 @@ intensity:</textarea>
       if (typeof heartName !== "undefined" && heartName?.value?.trim()) return heartName.value.trim();
       if (typeof companionName !== "undefined" && companionName?.value?.trim()) return companionName.value.trim();
       if (typeof selectedCompanionName !== "undefined" && selectedCompanionName) return selectedCompanionName;
-      return caption.textContent || "companion-heart";
+      return "Companion Mood Heart";
+    }
+
+    function heartExportSummary() {
+      const expression = currentExpression || infer(reply.value);
+      const colors = expression.colors?.length ? expression.colors.join(" · ") : "violet · blue · rose";
+      return `${colors} / ${expression.motion} / ${expression.pattern} / ${expression.intensity}%`;
+    }
+
+    function heartExportSubtitle() {
+      const expression = currentExpression || infer(reply.value);
+      return `${expression.motion} · ${expression.pattern} · ${expression.intensity}%`;
+    }
+
+    function heartExportFileLabel() {
+      const explicit = (typeof heartName !== "undefined" && heartName?.value?.trim()) ||
+        (typeof companionName !== "undefined" && companionName?.value?.trim()) ||
+        (typeof selectedCompanionName !== "undefined" && selectedCompanionName);
+      return explicit || heartExportSummary();
+    }
+
+    function heartExportExcerpt(limit = 260) {
+      const cleaned = reply.value
+        .replace(/\bHEART\b/ig, "")
+        .replace(/\b(colors?|arrangement|pattern|movement|motion|speed|rhythm|brightness|intensity)\s*:/ig, "$1:")
+        .replace(/\s+/g, " ")
+        .trim();
+      return cleaned.length > limit ? `${cleaned.slice(0, limit).trim()}…` : cleaned;
     }
 
     function drawHeartGlyph(ctx, expression, centerX, centerY, size, gap) {
@@ -1289,13 +1316,13 @@ intensity:</textarea>
       ctx.fillStyle = "#d7cce0";
       ctx.textAlign = "center";
       ctx.font = "24px Segoe UI, Arial, sans-serif";
-      drawWrappedText(ctx, caption.textContent || "companion mood heart", width / 2, 930, width - 220, 32);
+      drawWrappedText(ctx, heartExportSubtitle(), width / 2, 930, width - 220, 32);
       ctx.fillStyle = "#a99ab4";
       ctx.font = "19px Consolas, 'Courier New', monospace";
-      drawWrappedText(ctx, status.textContent || "", width / 2, 990, width - 260, 28);
+      drawWrappedText(ctx, heartExportSummary(), width / 2, 990, width - 260, 28);
 
       const link = document.createElement("a");
-      const label = currentHeartLabel();
+      const label = heartExportFileLabel();
       link.download = `${safeFileName(label)}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
@@ -1340,7 +1367,7 @@ intensity:</textarea>
 
       ctx.fillStyle = "#cbb7d7";
       ctx.font = "22px Segoe UI, Arial, sans-serif";
-      drawWrappedText(ctx, caption.textContent || "companion mood heart", width / 2, 242, width - 380, 30);
+      drawWrappedText(ctx, heartExportSubtitle(), width / 2, 242, width - 380, 30);
 
       drawHeartGlyph(ctx, currentExpression, width / 2, 675, 132, 24);
 
@@ -1358,13 +1385,9 @@ intensity:</textarea>
 
       ctx.fillStyle = "#d7c8df";
       ctx.font = "20px Consolas, 'Courier New', monospace";
-      let nextY = drawWrappedText(ctx, status.textContent || "", 150, panelY + 105, width - 300, 29) + 40;
+      let nextY = drawWrappedText(ctx, heartExportSummary(), 150, panelY + 105, width - 300, 29) + 40;
 
-      const excerpt = reply.value
-        .replace(/\s+/g, " ")
-        .replace(/^heart\s*/i, "")
-        .trim()
-        .slice(0, 360);
+      const excerpt = heartExportExcerpt(300);
       ctx.fillStyle = "#b9adbf";
       ctx.font = "20px Segoe UI, Arial, sans-serif";
       drawWrappedText(ctx, excerpt, 150, nextY, width - 300, 30);
@@ -1375,7 +1398,7 @@ intensity:</textarea>
       ctx.fillText("Companion Mood Heart · sixteen lights, one feeling", width / 2, height - 110);
 
       const link = document.createElement("a");
-      link.download = `${safeFileName(label)}-heart-card.png`;
+      link.download = `${safeFileName(heartExportFileLabel())}-heart-card.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
       downloadStatus.textContent = "Heart card downloaded.";
