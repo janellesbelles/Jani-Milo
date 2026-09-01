@@ -16,10 +16,12 @@
     }
 
     * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
 
     body {
       margin: 0;
       min-height: 100vh;
+      min-height: 100svh;
       overflow-x: hidden;
       background:
         radial-gradient(circle at 50% 32%, rgba(105, 57, 143, .2), transparent 35rem),
@@ -43,7 +45,7 @@
     main {
       width: min(1050px, calc(100% - 32px));
       margin: 0 auto;
-      padding: 52px 0 70px;
+      padding: calc(52px + env(safe-area-inset-top, 0px)) 0 calc(70px + env(safe-area-inset-bottom, 0px));
     }
 
     header {
@@ -324,6 +326,7 @@
       color: #f5eefb;
       padding: 12px 13px;
       font: inherit;
+      font-size: 16px;
       outline: none;
     }
 
@@ -349,7 +352,9 @@
       border: 0;
       border-radius: 15px;
       padding: 13px 16px;
+      min-height: 46px;
       cursor: pointer;
+      touch-action: manipulation;
       color: #160d1b;
       font-weight: 750;
       font-size: .92rem;
@@ -496,11 +501,55 @@
     }
 
     @media (max-width: 760px) {
-      main { padding-top: 30px; }
+      main {
+        width: min(100% - 20px, 560px);
+        padding-top: calc(22px + env(safe-area-inset-top, 0px));
+        padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+      }
+      header { margin-bottom: 18px; }
+      header p { font-size: .92rem; }
       .layout { grid-template-columns: 1fr; }
-      .heart-stage { min-height: 420px; padding: 34px; }
-      #heart { gap: 10px; }
+      .card { border-radius: 22px; }
+      .heart-stage {
+        min-height: clamp(330px, 70svh, 480px);
+        padding: 28px 22px 54px;
+      }
+      .heart-stage::after {
+        width: min(76vw, 18rem);
+        filter: blur(80px);
+      }
+      #heart {
+        width: min(275px, 68vw);
+        gap: clamp(8px, 2.4vw, 10px);
+      }
       .cell { border-radius: 15px; }
+      .mood-caption {
+        width: calc(100% - 34px);
+        bottom: 18px;
+        padding: 0 10px;
+        text-align: center;
+        font-size: .78rem;
+        line-height: 1.35;
+      }
+      .controls { padding: 22px 18px; }
+      textarea { min-height: 130px; }
+      .prompt-box textarea { min-height: 155px; }
+      .chips { gap: 8px; }
+      .chip { padding: 8px 11px; }
+    }
+
+    @media (max-width: 520px) {
+      h1 { font-size: clamp(2.25rem, 14vw, 3.6rem); }
+      .eyebrow { font-size: .68rem; letter-spacing: .16em; }
+      .row, .memory-actions { grid-template-columns: 1fr; }
+      .memory-actions button { margin-top: 8px; }
+      button { padding: 14px 16px; }
+    }
+
+    @media (max-width: 380px) {
+      main { width: calc(100% - 14px); }
+      .controls { padding: 20px 14px; }
+      .heart-stage { padding-left: 14px; padding-right: 14px; }
     }
   </style>
 </head>
@@ -1405,11 +1454,23 @@ intensity:</textarea>
     }
 
     const memoryKey = "companionMoodHeart.demo.saved.v1";
+    let memoryFallback = [];
     const readMemories = () => {
-      try { return JSON.parse(localStorage.getItem(memoryKey) || "[]"); }
-      catch { return []; }
+      try {
+        return JSON.parse(localStorage.getItem(memoryKey) || "[]");
+      } catch {
+        return memoryFallback;
+      }
     };
-    const writeMemories = memories => localStorage.setItem(memoryKey, JSON.stringify(memories));
+    const writeMemories = memories => {
+      memoryFallback = memories;
+      try {
+        localStorage.setItem(memoryKey, JSON.stringify(memories));
+        return true;
+      } catch {
+        return false;
+      }
+    };
     function refreshMemories() {
       const memories = readMemories();
       savedHearts.replaceChildren();
@@ -1427,9 +1488,11 @@ intensity:</textarea>
       const label = heartName.value.trim() || `Heart · ${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"})}`;
       const memories = readMemories();
       memories.unshift({id:`${Date.now()}`, label, text:reply.value, expression:currentExpression});
-      writeMemories(memories.slice(0, 60));
+      const persisted = writeMemories(memories.slice(0, 60));
       refreshMemories();
-      memoryStatus.textContent = `${label} was saved privately in this browser.`;
+      memoryStatus.textContent = persisted
+        ? `${label} was saved privately in this browser.`
+        : `${label} is saved for this visit, but this browser blocked private storage.`;
     });
     document.querySelector("#loadHeart").addEventListener("click", () => {
       const memory = readMemories().find(item => item.id === savedHearts.value);
@@ -1456,11 +1519,13 @@ intensity:</textarea>
       const newName = heartName.value.trim() || window.prompt("New name for this saved heart:", memory.label);
       if (!newName?.trim()) return;
       memory.label = newName.trim();
-      writeMemories(memories);
+      const persisted = writeMemories(memories);
       refreshMemories();
       savedHearts.value = memory.id;
       heartName.value = memory.label;
-      memoryStatus.textContent = `Renamed to ${memory.label}.`;
+      memoryStatus.textContent = persisted
+        ? `Renamed to ${memory.label}.`
+        : `Renamed for this visit, but this browser blocked private storage.`;
     });
     document.querySelector("#deleteHeart").addEventListener("click", () => {
       const memories = readMemories();
@@ -1470,10 +1535,12 @@ intensity:</textarea>
         return;
       }
       if (!window.confirm(`Delete "${memory.label}"? This cannot be undone.`)) return;
-      writeMemories(memories.filter(item => item.id !== memory.id));
+      const persisted = writeMemories(memories.filter(item => item.id !== memory.id));
       refreshMemories();
       heartName.value = "";
-      memoryStatus.textContent = `${memory.label} was deleted.`;
+      memoryStatus.textContent = persisted
+        ? `${memory.label} was deleted.`
+        : `${memory.label} was removed for this visit, but this browser blocked private storage.`;
     });
 
     document.querySelector("#express").addEventListener("click", () => render(infer(reply.value)));
