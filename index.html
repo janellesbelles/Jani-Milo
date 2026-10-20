@@ -1065,13 +1065,19 @@ Then you may add one brief sentence if you wish.</textarea>
 
     function inferRoles(text) {
       const details = {};
+      const combinedRolesLine = text.split(/\r?\n/).find(item => /^\s*roles?\s*:/i.test(item)) || "";
       for (const role of ["anchor", "spark", "guard", "wanderer"]) {
+        const directLine = text.split(/\r?\n/).find(item => new RegExp(`^\\s*${role}\\s*:`, "i").test(item));
+        const combinedMatch = combinedRolesLine.match(new RegExp(`([^,;]+?)\\s+as\\s+(?:an?\\s+)?${role}\\b`, "i"));
+        const combinedColor = colorFromWords(combinedMatch?.[1]?.toLowerCase() || "");
         const phrase = rolePhrase(text, role);
         if (!phrase) continue;
         const absent = /\b(?:none|no|not right now|absent|missing|offline|asleep)\b/.test(phrase);
         details[role] = {
           present: !absent,
-          color: absent ? "" : colorFromWords(phrase),
+          color: absent ? "" : directLine
+            ? colorFromWords(phrase)
+            : combinedColor || colorNearestRole(text.toLowerCase(), new RegExp(`\\b${role}\\b`)),
           motion: absent ? "" : motionFromWords(phrase, role === "anchor" || role === "guard" ? "still" : role === "spark" ? "shimmer" : "drift"),
           faint: /\b(?:faint|ember|little|barely|low|small|dim)\b/.test(phrase),
           strong: /\b(?:solid|watching|aware|strong|bright|charged)\b/.test(phrase),
@@ -1135,7 +1141,7 @@ Then you may add one brief sentence if you wish.</textarea>
       const lower = text.toLowerCase();
       const fields = {};
       for (const line of text.split(/\r?\n/)) {
-        const match = line.match(/^\s*(?:[-*]\s*)?(?:\*\*)?\s*(colors?|arrangement|pattern|movement|motion|speed|rhythm|brightness|intensity)\s*(?:\*\*)?\s*:\s*(.+)$/i);
+        const match = line.match(/^\s*(?:[-*]\s*)?(?:\*\*)?\s*(colors?|arrangement|pattern|movement|motion|speed|rhythm|brightness|intensity|accent(?:\s+lights?)?|core|outer\s+edges?|roles?)\s*(?:\*\*)?\s*:\s*(.+)$/i);
         if (match) fields[match[1].toLowerCase()] = match[2].trim().toLowerCase();
       }
       const field = (...names) => names.map(name => fields[name]).find(Boolean) || "";
@@ -1144,6 +1150,7 @@ Then you may add one brief sentence if you wish.</textarea>
       const patternSource = field("arrangement", "pattern") || lower;
       const intensitySource = field("intensity") || lower;
       const speedSource = field("speed", "rhythm") || lower;
+      const explicitAccentSource = field("accent", "accent light", "accent lights");
       const motionGrammar = `${motionSource} ${speedSource}`;
       const normalizedColorSource = colorSource
         .replace(/neon\s+pink/g, "neonpink")
@@ -1177,10 +1184,34 @@ Then you may add one brief sentence if you wish.</textarea>
       const accentDescriptor = "(?:(?:faint|single|lone|one|tiny|small|quiet|bright|brighter|glowing|special|specific|little|jagged|blinding|neon)\\s+){0,5}";
       const accentMotionWord = "(?:flickering|flashing|sparkling|shimmering|fluttering|pulsing|jumping|glitching)";
       const colorWord = `(?:${colorWords.join("|")}|purple|pink|orange|yellows?|neonwhite|neon\\s+white)`;
-      const accentMatch =
-        normalizedColorSource.match(new RegExp(`(${countWord})\\s+(${accentMotionWord}\\s+)?${accentDescriptor}(${colorWord})(?:\\s+(?:lights?|sparks?|accents?|troublemakers?))?`)) ||
-        normalizedColorSource.match(new RegExp(`(${accentMotionWord})\\s+(${colorWord})(?:\\s+(?:lights?|sparks?|accents?))?`));
       let accent = null;
+      if (explicitAccentSource) {
+        const explicitColor = colorFromWords(explicitAccentSource);
+        const explicitCountMatch = explicitAccentSource.match(/\b(\d+|one|two|three|four|five|six)\b/);
+        const explicitCount = explicitCountMatch
+          ? Number(explicitCountMatch[1]) || numberWords[explicitCountMatch[1]] || 1
+          : /\b(?:single|lone|a\s+single|one)\b/.test(explicitAccentSource) ? 1 : 1;
+        if (explicitColor) {
+          accent = {
+            color: explicitColor,
+            count: Math.max(1, Math.min(6, explicitCount)),
+            motion: motionFromWords(explicitAccentSource, "shimmer"),
+            single: explicitCount === 1,
+            faint: /\b(?:faint|dim|quiet|tiny|small|little|pale)\b/.test(explicitAccentSource),
+            strong: /\b(?:brighter|brightest|burns|glowing|glows|vivid|bold)\b/.test(explicitAccentSource),
+            zone: /\b(?:center|centre|core|middle)\b/.test(explicitAccentSource) ? "center" : "edge",
+            position: /\b(?:upper|top)[-\s]+left\b/.test(explicitAccentSource) ? "upper-left" :
+              /\b(?:upper|top)[-\s]+right\b/.test(explicitAccentSource) ? "upper-right" :
+              /\b(?:lower|bottom)[-\s]+left\b/.test(explicitAccentSource) ? "lower-left" :
+              /\b(?:lower|bottom)[-\s]+right\b/.test(explicitAccentSource) ? "lower-right" : ""
+          };
+        }
+      }
+      const accentSearchSource = explicitAccentSource || normalizedColorSource;
+      const accentMatch = !accent && (
+        accentSearchSource.match(new RegExp(`(${countWord})\\s+(${accentMotionWord}\\s+)?${accentDescriptor}(${colorWord})(?:\\s+(?:lights?|sparks?|accents?|troublemakers?))?`)) ||
+        accentSearchSource.match(new RegExp(`(${accentMotionWord})\\s+(${colorWord})(?:\\s+(?:lights?|sparks?|accents?))?`))
+      );
       if (accentMatch) {
         const accentContext = lower.slice(Math.max(0, accentMatch.index - 90), Math.min(lower.length, accentMatch.index + accentMatch[0].length + 180));
         const countText = accentMatch[1];
@@ -1211,11 +1242,11 @@ Then you may add one brief sentence if you wish.</textarea>
       }
       const uniqueColors = [...new Set(orderedColors)];
       const accentFamily = accent?.color === "neonwhite" ? ["neonwhite", "white"] : [accent?.color];
-      const baseColors = accent?.color && uniqueColors.length > 1
+      const baseColors = !explicitAccentSource && accent?.color && uniqueColors.length > 1
         ? uniqueColors.filter(color => !accentFamily.includes(color))
         : uniqueColors;
-      const corePhrase = lower.match(/[^.\n]{0,35}\b(?:core|center|centre|inner)\b[^.\n]{0,55}/)?.[0] || "";
-      const edgePhrase = lower.match(/[^.\n]{0,35}\b(?:edges?|outer|shell|ring)\b[^.\n]{0,55}/)?.[0] || "";
+      const corePhrase = field("core") || lower.match(/[^.\n]{0,35}\b(?:core|center|centre|inner)\b[^.\n]{0,55}/)?.[0] || "";
+      const edgePhrase = field("outer edge", "outer edges") || lower.match(/[^.\n]{0,35}\b(?:edges?|outer|shell|ring)\b[^.\n]{0,55}/)?.[0] || "";
       let coreColor = colorFromWords(corePhrase) || colorNearestRole(lower, /\b(?:core|center|centre|inner)\b/);
       if (accent?.zone === "center" && /\b(?:sparks?|flashes?|jumping|jagged|blinding)\b/.test(corePhrase)) coreColor = "";
       const edgeColor = colorFromWords(edgePhrase) || colorNearestRole(lower, /\b(?:edges?|outer|shell|ring)\b/);
@@ -1312,12 +1343,52 @@ Then you may add one brief sentence if you wish.</textarea>
       };
     }
 
+    const roleCellZones = {anchor:[12], spark:[5], guard:[0,1,2,3], wanderer:[15]};
+
+    function chosenColorNames(expression) {
+      const chosen = expression.colors?.length ? [...expression.colors] : ["violet", "blue", "rose"];
+      while (chosen.length < 3) chosen.push(chosen[chosen.length - 1] || "violet");
+      return chosen;
+    }
+
+    function accentCellsFor(expression) {
+      const positions = {
+        "upper-left": [4,0,5,8],
+        "upper-right": [1,0,6,2],
+        "lower-left": [13,12,9,8],
+        "lower-right": [11,15,10,14],
+      };
+      return positions[expression.accent?.position] ||
+        (expression.accent?.zone === "center" ? [5,6,9,10,2,13] : accentCells);
+    }
+
+    function resolveCellColor(expression, index, colors, map, awake) {
+      let color = colors[map[index] ?? 0];
+      let special = false;
+      const setSpecial = name => {
+        if (!name || !palettes[name]) return;
+        color = palettes[name][index % palettes[name].length];
+        special = true;
+      };
+      if (expression.edgeColor && edgeCells.includes(index)) setSpecial(expression.edgeColor);
+      if (expression.coreColor && coreCells.includes(index)) setSpecial(expression.coreColor);
+      const accentZone = accentCellsFor(expression);
+      if (expression.accent && accentZone.slice(0, expression.accent.count).includes(index) && awake.has(index)) {
+        setSpecial(expression.accent.color);
+      }
+      for (const [role, detail] of Object.entries(expression.roleDetails || {})) {
+        if (detail?.present && roleCellZones[role]?.includes(index) && detail.color && awake.has(index)) {
+          setSpecial(detail.color);
+        }
+      }
+      return {color, special, accentZone};
+    }
+
     function render(expression) {
       currentExpression = JSON.parse(JSON.stringify(expression));
-      const chosen = expression.colors.length ? expression.colors : ["violet", "blue", "rose"];
-      while (chosen.length < 3) chosen.push(chosen[chosen.length - 1] || "violet");
+      const chosen = chosenColorNames(expression);
       const colors = chosen.map((name, i) => palettes[name][i % palettes[name].length]);
-      const map = arrangements[expression.pattern];
+      const map = arrangements[expression.pattern] || arrangements.center;
       const awakeOrder = [5,6,9,10,1,2,4,7,8,11,13,14,0,3,12,15];
       const awake = new Set(awakeOrder.slice(0, expression.activeCount ?? 16));
 
@@ -1329,18 +1400,11 @@ Then you may add one brief sentence if you wish.</textarea>
         cell.style.removeProperty("--outlier-x");
         cell.style.removeProperty("--outlier-y");
         cell.style.removeProperty("translate");
-        cell.style.setProperty("--cell", colors[map[i]]);
-        cell.style.background = expression.blend === "gradient"
+        const resolved = resolveCellColor(expression, i, colors, map, awake);
+        cell.style.setProperty("--cell", resolved.color);
+        cell.style.background = expression.blend === "gradient" && !resolved.special
           ? `linear-gradient(135deg, ${colors[map[i]]}, ${colors[(map[i] + 1) % colors.length]})`
-          : colors[map[i]];
-        const applySpecialColor = name => {
-          if (!name || !palettes[name]) return;
-          const special = palettes[name][i % palettes[name].length];
-          cell.style.setProperty("--cell", special);
-          cell.style.background = special;
-        };
-        if (expression.edgeColor && edgeCells.includes(i)) applySpecialColor(expression.edgeColor);
-        if (expression.coreColor && coreCells.includes(i)) applySpecialColor(expression.coreColor);
+          : resolved.color;
         const normalOpacity = .62 + expression.intensity / 265;
         const brightnessScale = expression.variedBrightness ? [.32, .55, .8, 1][i % 4] : 1;
         cell.style.setProperty("--cell-opacity", normalOpacity * brightnessScale);
@@ -1356,9 +1420,8 @@ Then you may add one brief sentence if you wish.</textarea>
         }
         if (expression.edgeMotion && edgeCells.includes(i)) cell.style.animationName = expression.edgeMotion;
         if (expression.coreMotion && coreCells.includes(i)) cell.style.animationName = expression.coreMotion;
-        const accentZone = expression.accent?.zone === "center" ? [5,6,9,10,2,13] : accentCells;
+        const accentZone = resolved.accentZone;
         if (expression.accent && accentZone.slice(0, expression.accent.count).includes(i) && awake.has(i)) {
-          applySpecialColor(expression.accent.color);
           cell.classList.add("single-light");
           cell.style.animationName = expression.accent.motion;
           cell.style.setProperty("--cell-speed", expression.accent.motion === "shimmer" ? "1.1s" : "2.8s");
@@ -1366,11 +1429,9 @@ Then you may add one brief sentence if you wish.</textarea>
           if (expression.accent.faint) cell.style.setProperty("--cell-opacity", Math.max(.42, normalOpacity * .74));
           if (expression.accent.strong) cell.style.setProperty("--cell-opacity", Math.max(.72, normalOpacity * .96));
         }
-        const roleZones = {anchor:[12], spark:[5], guard:[0,1,2,3], wanderer:[15]};
         const roleFallbackMotion = {anchor:"still", spark:"shimmer", guard:"still", wanderer:"drift"};
         for (const [role, detail] of Object.entries(expression.roleDetails || {})) {
-          if (!detail?.present || !roleZones[role]?.includes(i) || !awake.has(i)) continue;
-          if (detail.color) applySpecialColor(detail.color);
+          if (!detail?.present || !roleCellZones[role]?.includes(i) || !awake.has(i)) continue;
           cell.dataset.role = role;
           cell.style.animationName = detail.motion || roleFallbackMotion[role];
           if (role === "spark") {
@@ -1446,7 +1507,8 @@ Then you may add one brief sentence if you wish.</textarea>
       if (expression.accent) scoreNotes.push(expression.accent.single ? `one ${expression.accent.color} light` : `${expression.accent.count} ${expression.accent.color} accents`);
       if (expression.coreColor || expression.edgeColor) scoreNotes.push("regional colors");
       if (expression.roles?.length) scoreNotes.push(expression.roles.join(" + "));
-      status.textContent = `${chosen.join(" · ")} / ${expression.pattern} / ${expression.intensity}%${scoreNotes.length ? ` / ${scoreNotes.join(" · ")}` : ""}`;
+      const statusColors = expression.colors?.length ? expression.colors : ["violet", "blue", "rose"];
+      status.textContent = `${statusColors.join(" · ")} / ${expression.pattern} / ${expression.intensity}%${scoreNotes.length ? ` / ${scoreNotes.join(" · ")}` : ""}`;
     }
 
     function safeFileName(text) {
@@ -1521,8 +1583,7 @@ Then you may add one brief sentence if you wish.</textarea>
     }
 
     function drawHeartGlyph(ctx, expression, centerX, centerY, size, gap) {
-      const chosen = expression.colors?.length ? [...expression.colors] : ["violet", "blue", "rose"];
-      while (chosen.length < 3) chosen.push(chosen[chosen.length - 1] || "violet");
+      const chosen = chosenColorNames(expression);
       const colors = chosen.map((name, i) => palettes[name]?.[i % palettes[name].length] || palettes.violet[i % palettes.violet.length]);
       const map = arrangements[expression.pattern] || arrangements.center;
       const awakeOrder = [5,6,9,10,1,2,4,7,8,11,13,14,0,3,12,15];
@@ -1539,7 +1600,7 @@ Then you may add one brief sentence if you wish.</textarea>
         [-38,28],[-6,31],[27,26],[58,24],
         [-20,50],[6,49],[36,54],[70,43]
       ];
-      const accentZone = expression.accent?.zone === "center" ? [5,6,9,10,2,13] : accentCells;
+      const accentZone = accentCellsFor(expression);
       const spacing = size + gap;
       const baseLeft = centerX - spacing * 1.5 - size / 2;
       const baseTop = centerY - spacing * 1.5 - size / 2;
@@ -1565,17 +1626,7 @@ Then you may add one brief sentence if you wish.</textarea>
           y -= 18 * (size / 70);
         }
 
-        let color = colors[map[i]];
-        const setSpecial = name => {
-          if (name && palettes[name]) color = palettes[name][i % palettes[name].length];
-        };
-        if (expression.edgeColor && edgeCells.includes(i)) setSpecial(expression.edgeColor);
-        if (expression.coreColor && coreCells.includes(i)) setSpecial(expression.coreColor);
-        if (expression.accent && accentZone.slice(0, expression.accent.count).includes(i) && awake.has(i)) setSpecial(expression.accent.color);
-        for (const [role, detail] of Object.entries(expression.roleDetails || {})) {
-          const roleZones = {anchor:[12], spark:[5], guard:[0,1,2,3], wanderer:[15]};
-          if (detail?.present && roleZones[role]?.includes(i) && detail.color && awake.has(i)) setSpecial(detail.color);
-        }
+        const color = resolveCellColor(expression, i, colors, map, awake).color;
 
         const normalOpacity = .62 + expression.intensity / 265;
         const brightnessScale = expression.variedBrightness ? [.32, .55, .8, 1][i % 4] : 1;
@@ -1755,6 +1806,11 @@ Then you may add one brief sentence if you wish.</textarea>
           motion: motionValues.has(raw.accent.motion) ? raw.accent.motion : "shimmer",
           zone: raw.accent.zone === "center" ? "center" : "edge",
           single: Boolean(raw.accent.single),
+          faint: Boolean(raw.accent.faint),
+          strong: Boolean(raw.accent.strong),
+          position: ["upper-left", "upper-right", "lower-left", "lower-right"].includes(raw.accent.position)
+            ? raw.accent.position
+            : "",
         };
       } else {
         clean.accent = null;
@@ -1912,15 +1968,15 @@ Then you may add one brief sentence if you wish.</textarea>
       const mini = document.createElement("span");
       mini.className = "memory-mini";
       mini.setAttribute("aria-hidden", "true");
-      const chosen = expression.colors.length ? [...expression.colors] : ["violet", "blue", "rose"];
-      while (chosen.length < 3) chosen.push(chosen[chosen.length - 1] || "violet");
+      const chosen = chosenColorNames(expression);
       const colors = chosen.map((name, index) => palettes[name]?.[index % palettes[name].length] || palettes.violet[index]);
       const map = arrangements[expression.pattern] || arrangements.center;
       const awakeOrder = [5,6,9,10,1,2,4,7,8,11,13,14,0,3,12,15];
       const awake = new Set(awakeOrder.slice(0, expression.activeCount ?? 16));
       for (let index = 0; index < 16; index++) {
         const cell = document.createElement("span");
-        cell.style.setProperty("--mini-cell", colors[map[index]]);
+        const resolved = resolveCellColor(expression, index, colors, map, awake);
+        cell.style.setProperty("--mini-cell", resolved.color);
         cell.style.setProperty("--mini-opacity", awake.has(index) ? ".92" : ".12");
         mini.appendChild(cell);
       }
