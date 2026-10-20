@@ -1,0 +1,12 @@
+{
+  "name": "companion-mood-heart",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check api/heart.js && node --test"
+  },
+  "engines": {
+    "node": "24.x"
+  }
+}

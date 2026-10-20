@@ -352,7 +352,11 @@
       line-height: 1.48;
     }
 
-    textarea:focus, select:focus { border-color: rgba(216,140,255,.55); }
+    textarea:focus, select:focus, input:focus-visible, button:focus-visible {
+      border-color: rgba(216,140,255,.72);
+      outline: 2px solid rgba(216,140,255,.32);
+      outline-offset: 2px;
+    }
 
     .row {
       display: grid;
@@ -361,6 +365,19 @@
     }
 
     input[type="range"] { accent-color: #c982ee; }
+
+    .label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .label-row label { margin: 0; }
+    .label-row output {
+      color: #d9b7eb;
+      font: 700 .78rem Consolas, "Courier New", monospace;
+    }
 
     button {
       width: 100%;
@@ -437,6 +454,64 @@
       margin-top: 0;
     }
 
+    .comfort-controls {
+      margin-top: 18px;
+      padding: 16px;
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 16px;
+      background: rgba(255,255,255,.025);
+    }
+    .comfort-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .comfort-head strong { font-size: .82rem; }
+    .comfort-head span { color: #8f8499; font-size: .7rem; }
+    .comfort-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .comfort-actions button {
+      margin: 0;
+      min-height: 42px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,.1);
+      background: rgba(255,255,255,.055);
+      color: #ddd2e4;
+      box-shadow: none;
+      font-size: .78rem;
+    }
+    .comfort-actions button[aria-pressed="true"] {
+      border-color: rgba(216,140,255,.46);
+      background: rgba(180,116,223,.16);
+      color: #f4dcff;
+    }
+
+    body.motion-paused .cell { animation-play-state: paused !important; }
+    body.quiet-glow .heart-stage::after { opacity: .045; filter: blur(110px); }
+    body.quiet-glow .cell {
+      box-shadow: inset 0 1px 1px rgba(255,255,255,.24), 0 0 9px color-mix(in srgb, var(--cell), transparent 70%);
+    }
+
+    .shared-notice {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      z-index: 3;
+      max-width: calc(100% - 36px);
+      transform: translateX(-50%);
+      border: 1px solid rgba(216,140,255,.24);
+      border-radius: 999px;
+      padding: 7px 13px;
+      background: rgba(14,9,20,.78);
+      color: #dbc7e7;
+      font-size: .72rem;
+      line-height: 1.3;
+      text-align: center;
+      backdrop-filter: blur(10px);
+    }
+    .shared-notice[hidden] { display: none; }
+
     .heart-memory {
       margin-top: 18px;
       padding-top: 18px;
@@ -461,6 +536,60 @@
       box-shadow: none;
     }
 
+    .memory-gallery {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+      margin-top: 10px;
+    }
+    .memory-empty {
+      grid-column: 1 / -1;
+      margin: 3px 0 0;
+      padding: 15px;
+      border: 1px dashed rgba(255,255,255,.09);
+      border-radius: 14px;
+      color: #857b8d;
+      text-align: center;
+    }
+    .memory-card {
+      display: grid;
+      grid-template-columns: 52px minmax(0, 1fr);
+      align-items: center;
+      gap: 10px;
+      min-height: 72px;
+      margin: 0;
+      padding: 9px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,.035);
+      color: #e8dfea;
+      box-shadow: none;
+      text-align: left;
+    }
+    .memory-card[aria-current="true"] {
+      border-color: rgba(216,140,255,.5);
+      background: rgba(180,116,223,.12);
+    }
+    .memory-card-copy { min-width: 0; }
+    .memory-card-copy strong,
+    .memory-card-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .memory-card-copy strong { font-size: .75rem; }
+    .memory-card-copy small { margin-top: 4px; color: #95899d; font-size: .64rem; font-weight: 500; }
+    .memory-mini {
+      width: 48px;
+      aspect-ratio: 1;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 3px;
+      transform: rotate(45deg) scale(.72);
+    }
+    .memory-mini span {
+      border-radius: 3px;
+      background: var(--mini-cell, #8d62d7);
+      box-shadow: 0 0 7px color-mix(in srgb, var(--mini-cell), transparent 45%);
+      opacity: var(--mini-opacity, .9);
+    }
+
     .connection {
       margin-top: 22px;
       padding: 20px;
@@ -468,6 +597,27 @@
       border-radius: 18px;
       background: rgba(7,6,11,.36);
     }
+
+    .connection > summary {
+      list-style: none;
+      cursor: pointer;
+      border-radius: 10px;
+      outline: none;
+    }
+
+    .connection > summary::-webkit-details-marker { display: none; }
+    .connection > summary::after {
+      content: "+";
+      color: #c9a9f5;
+      font-size: 1rem;
+      line-height: 1;
+    }
+    .connection[open] > summary::after { content: "−"; }
+    .connection > summary:focus-visible {
+      box-shadow: 0 0 0 3px rgba(216,140,255,.24);
+    }
+
+    .connection-body { margin-top: 14px; }
 
     .connection-head {
       display: flex;
@@ -560,12 +710,21 @@
       .row, .memory-actions { grid-template-columns: 1fr; }
       .memory-actions button { margin-top: 8px; }
       button { padding: 14px 16px; }
+      .memory-gallery { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 380px) {
       main { width: calc(100% - 14px); }
       .controls { padding: 20px 14px; }
       .heart-stage { padding-left: 14px; padding-right: 14px; }
+      .comfort-actions { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      body:not(.motion-user-enabled) .cell { animation-play-state: paused !important; }
+      button { transition: none; }
+      button:hover { transform: none; }
     }
   </style>
 </head>
@@ -580,13 +739,14 @@
 
     <section class="layout">
       <div class="card heart-stage">
+        <div class="shared-notice" id="sharedNotice" hidden aria-live="polite"></div>
         <div id="heart" class="breathe" aria-label="Sixteen animated mood lights"></div>
         <div class="mood-caption" id="caption">quietly hopeful · slow breathing</div>
       </div>
 
       <div class="card controls">
-        <h2>Let the heart speak</h2>
-        <p class="intro">Paste your companion's reply here. The interpreter looks for emotional colors, movement, pattern, and intensity.</p>
+        <h2>Option 1 · Paste a reply</h2>
+        <p class="intro">No connection needed. Paste your companion's reply here and the interpreter will find its colors, movement, pattern, and intensity.</p>
 
         <label for="reply">Companion's expression</label>
         <textarea id="reply">I feel quietly hopeful. Let the center glow warm rose, surrounded by violet and deep blue. Breathe slowly, with gentle intensity.</textarea>
@@ -623,15 +783,32 @@
           </div>
         </div>
 
-        <label for="intensity">Intensity</label>
+        <div class="label-row">
+          <label for="intensity">Intensity</label>
+          <output id="intensityValue" for="intensity">62%</output>
+        </div>
         <input id="intensity" type="range" min="20" max="100" value="62">
 
         <button id="express">Express this feeling</button>
         <div class="status" id="status"></div>
         <div class="share-actions">
+          <button id="sendHeart">Send this heart</button>
           <button class="secondary" id="downloadHeart">Download heart image</button>
           <button class="secondary" id="downloadHeartCard">Download heart card</button>
-          <div class="status" id="downloadStatus"></div>
+          <div class="status" id="shareStatus" aria-live="polite"></div>
+          <div class="status" id="downloadStatus" aria-live="polite"></div>
+        </div>
+
+        <div class="comfort-controls">
+          <div class="comfort-head">
+            <strong>Comfort controls</strong>
+            <span>These stay on this device</span>
+          </div>
+          <div class="comfort-actions">
+            <button type="button" id="motionToggle" aria-pressed="false">Pause motion</button>
+            <button type="button" id="quietGlowToggle" aria-pressed="false">Quiet glow</button>
+          </div>
+          <div class="status" id="comfortStatus" aria-live="polite"></div>
         </div>
 
         <div class="examples">
@@ -652,13 +829,14 @@
           <select id="savedHearts" aria-label="Saved hearts">
             <option value="">No saved hearts yet</option>
           </select>
+          <div class="memory-gallery" id="memoryGallery" role="list" aria-label="Saved heart gallery"></div>
           <div class="memory-actions">
             <button id="saveHeart">Save this heart</button>
             <button class="secondary" id="loadHeart">Load selected</button>
             <button class="secondary" id="renameHeart">Rename selected</button>
             <button class="secondary" id="deleteHeart">Delete selected</button>
           </div>
-          <div class="status" id="memoryStatus"></div>
+          <div class="status" id="memoryStatus" aria-live="polite"></div>
         </div>
 
         <div class="prompt-box">
@@ -687,12 +865,60 @@ speed:
 brightness:
 intensity:</textarea>
           <button id="copyPrompt">Copy prompt</button>
-          <div class="status" id="copyStatus"></div>
+          <div class="status" id="copyStatus" aria-live="polite"></div>
         </div>
+
+        <details class="connection" id="liveConnection">
+          <summary class="connection-head">
+            <strong>Option 2 · Connect live</strong>
+            <span class="connection-state" id="connectionState">checking cloud bridge…</span>
+          </summary>
+          <div class="connection-body">
+          <div id="connectForm">
+            <label for="provider">Provider</label>
+            <select id="provider">
+              <option value="nomi">Nomi</option>
+              <option value="kindroid">Kindroid</option>
+            </select>
+            <label for="companionName">Companion's name</label>
+            <input id="companionName" type="text" value="Lorn" maxlength="80" autocomplete="off" placeholder="Lorn, Miu, or another name">
+            <div id="kindroidFields" hidden>
+              <label for="kindroidAiId">Kindroid Kin ID</label>
+              <input id="kindroidAiId" type="text" maxlength="160" autocomplete="off" placeholder="Kin ID from Kindroid settings">
+            </div>
+            <p>Your key is held only in this open page's memory, sent through the Vercel bridge when needed, and forgotten on disconnect or close. It is never saved in this browser or repository.</p>
+            <input id="apiKey" type="password" maxlength="300" autocomplete="off" spellcheck="false" placeholder="Nomi API key">
+            <button id="connectButton" disabled>Load my Nomis</button>
+            <div id="companionPicker" hidden>
+              <label for="companionSelect">Who should the heart hear?</label>
+              <select id="companionSelect"></select>
+              <button id="selectCompanion">Connect selected Nomi</button>
+            </div>
+          </div>
+          <div id="liveChat" hidden>
+            <p id="liveWarning">Messages here are real messages in the selected companion's main conversation.</p>
+            <textarea id="messageToCompanion" maxlength="800">Show me what you feel through your mood heart. Reply with this HEART block first, before any reflection, and keep it under 60 words:
+HEART
+colors:
+arrangement:
+movement:
+speed:
+brightness:
+intensity: 0-100
+Optional: describe accent lights, a core, outer edges, or roles such as anchor, spark, guard, and wanderer.
+Then you may add one brief sentence if you wish.</textarea>
+            <div class="status" id="messageCount">0 / 800</div>
+            <button id="sendToCompanion">Ask and animate the reply</button>
+            <button class="secondary" id="cancelWaiting" hidden>Stop waiting</button>
+            <button class="secondary" id="disconnectButton">Disconnect</button>
+          </div>
+          <div class="status" id="connectionMessage" aria-live="polite"></div>
+          </div>
+        </details>
 
       </div>
     </section>
-    <footer>Safe demo · everything stays in your browser</footer>
+    <footer>Saved hearts stay in your browser · live keys are held only while this page is open</footer>
   </main>
 
   <script>
@@ -705,8 +931,26 @@ intensity:</textarea>
     const status = document.querySelector("#status");
     const heartName = document.querySelector("#heartName");
     const savedHearts = document.querySelector("#savedHearts");
+    const memoryGallery = document.querySelector("#memoryGallery");
     const memoryStatus = document.querySelector("#memoryStatus");
     const downloadStatus = document.querySelector("#downloadStatus");
+    const shareStatus = document.querySelector("#shareStatus");
+    const sharedNotice = document.querySelector("#sharedNotice");
+    const intensityValue = document.querySelector("#intensityValue");
+    const motionToggle = document.querySelector("#motionToggle");
+    const quietGlowToggle = document.querySelector("#quietGlowToggle");
+    const comfortStatus = document.querySelector("#comfortStatus");
+    const provider = document.querySelector("#provider");
+    const companionName = document.querySelector("#companionName");
+    const kindroidFields = document.querySelector("#kindroidFields");
+    const companionPicker = document.querySelector("#companionPicker");
+    const companionSelect = document.querySelector("#companionSelect");
+    const connectForm = document.querySelector("#connectForm");
+    const liveChat = document.querySelector("#liveChat");
+    const connectionState = document.querySelector("#connectionState");
+    const connectionMessage = document.querySelector("#connectionMessage");
+    const messageToCompanion = document.querySelector("#messageToCompanion");
+    const messageCount = document.querySelector("#messageCount");
 
     const palettes = {
       rose: ["#ff7dac", "#f9a2bd", "#d85c98"],
@@ -1188,6 +1432,8 @@ intensity:</textarea>
       motion.value = expression.motion;
       pattern.value = expression.pattern;
       intensity.value = expression.intensity;
+      intensityValue.value = `${expression.intensity}%`;
+      intensityValue.textContent = `${expression.intensity}%`;
 
       const mood = reply.value.split(/[.!?]/)[0].replace(/^I feel\s*/i, "").trim() || "an unnamed feeling";
       caption.textContent = expression.caption || `${mood.toLowerCase()} · ${expression.motion}`;
@@ -1469,43 +1715,282 @@ intensity:</textarea>
       downloadStatus.textContent = "Heart card downloaded.";
     }
 
+    const motionValues = new Set([...motion.options].map(option => option.value));
+    const roleNames = ["anchor", "spark", "guard", "wanderer"];
+
+    function clippedString(value, limit) {
+      return typeof value === "string" ? value.trim().slice(0, limit) : "";
+    }
+
+    function sanitizeExpression(raw, text = "") {
+      const fallback = infer(text || reply.value);
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return fallback;
+      const clean = {...fallback};
+      const colors = Array.isArray(raw.colors)
+        ? raw.colors.filter(color => typeof color === "string" && palettes[color]).slice(0, 3)
+        : [];
+      if (colors.length) clean.colors = colors;
+      if (motionValues.has(raw.motion)) clean.motion = raw.motion;
+      if (Object.hasOwn(arrangements, raw.pattern)) clean.pattern = raw.pattern;
+      if (Number.isFinite(Number(raw.intensity))) clean.intensity = Math.max(20, Math.min(100, Math.round(Number(raw.intensity))));
+      if (["solid", "gradient"].includes(raw.blend)) clean.blend = raw.blend;
+      if (Number.isFinite(Number(raw.activeCount))) clean.activeCount = Math.max(1, Math.min(16, Math.round(Number(raw.activeCount))));
+      if (Number.isFinite(Number(raw.cyclesPerMinute))) clean.cyclesPerMinute = Math.max(1, Math.min(240, Number(raw.cyclesPerMinute)));
+      for (const key of ["variedBrightness", "accentFlicker", "multiCluster", "hasOutlier", "organicSpacing"]) {
+        if (typeof raw[key] === "boolean") clean[key] = raw[key];
+      }
+      if (["grid", "diamond"].includes(raw.formation)) clean.formation = raw.formation;
+      for (const key of ["coreColor", "edgeColor"]) {
+        if (typeof raw[key] === "string" && palettes[raw[key]]) clean[key] = raw[key];
+      }
+      for (const key of ["coreMotion", "edgeMotion"]) {
+        if (motionValues.has(raw[key])) clean[key] = raw[key];
+      }
+      clean.speed = clippedString(raw.speed, 100) || clean.speed;
+      clean.caption = clippedString(raw.caption, 160) || clean.caption;
+      if (raw.accent && typeof raw.accent === "object" && palettes[raw.accent.color]) {
+        clean.accent = {
+          color: raw.accent.color,
+          count: Math.max(1, Math.min(16, Math.round(Number(raw.accent.count) || 1))),
+          motion: motionValues.has(raw.accent.motion) ? raw.accent.motion : "shimmer",
+          zone: raw.accent.zone === "center" ? "center" : "edge",
+          single: Boolean(raw.accent.single),
+        };
+      } else {
+        clean.accent = null;
+      }
+      clean.roleDetails = {};
+      for (const role of roleNames) {
+        const detail = raw.roleDetails?.[role];
+        if (!detail || typeof detail !== "object") continue;
+        clean.roleDetails[role] = {
+          present: Boolean(detail.present),
+          color: palettes[detail.color] ? detail.color : "",
+          motion: motionValues.has(detail.motion) ? detail.motion : "",
+          faint: Boolean(detail.faint),
+          strong: Boolean(detail.strong),
+          phrase: clippedString(detail.phrase, 180),
+        };
+      }
+      clean.roles = roleNames.filter(role => clean.roleDetails[role]?.present);
+      return clean;
+    }
+
+    function expressionForSharing(expression) {
+      return sanitizeExpression(expression, reply.value);
+    }
+
+    function encodeHeartPayload(payload) {
+      const bytes = new TextEncoder().encode(JSON.stringify(payload));
+      let binary = "";
+      for (const byte of bytes) binary += String.fromCharCode(byte);
+      return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    }
+
+    function decodeHeartPayload(value) {
+      if (!value || value.length > 12_000 || !/^[A-Za-z0-9_-]+$/.test(value)) throw new Error("Invalid shared heart");
+      const padded = value.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - value.length % 4) % 4);
+      const binary = atob(padded);
+      const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+      return JSON.parse(new TextDecoder().decode(bytes));
+    }
+
+    function buildHeartLink() {
+      if (!currentExpression) render(infer(reply.value));
+      const url = new URL(location.href);
+      url.search = "";
+      url.hash = `heart=${encodeHeartPayload({
+        v: 1,
+        name: clippedString(heartName.value, 80),
+        text: clippedString(reply.value, 1200),
+        expression: expressionForSharing(currentExpression),
+      })}`;
+      return url.toString();
+    }
+
+    async function copyText(value) {
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+        await Promise.race([
+          navigator.clipboard.writeText(value),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Clipboard timed out")), 1200)),
+        ]);
+      } catch {
+        const input = document.createElement("textarea");
+        input.value = value;
+        input.setAttribute("readonly", "");
+        input.style.position = "fixed";
+        input.style.opacity = "0";
+        document.body.appendChild(input);
+        input.select();
+        if (!document.execCommand("copy")) throw new Error("Copy failed");
+        input.remove();
+      }
+    }
+
+    async function sendCurrentHeart() {
+      const url = buildHeartLink();
+      const label = currentHeartLabel();
+      try {
+        if (navigator.share) {
+          await navigator.share({title: label, text: "A heart expressed in sixteen lights.", url});
+          shareStatus.textContent = "Heart shared.";
+        } else {
+          await copyText(url);
+          shareStatus.textContent = "Private heart link copied.";
+        }
+      } catch (error) {
+        shareStatus.textContent = error?.name === "AbortError" ? "Sharing canceled." : "Couldn't share this heart. Try again.";
+      }
+    }
+
+    function loadSharedHeartFromHash() {
+      const encoded = location.hash.startsWith("#heart=") ? location.hash.slice(7) : "";
+      if (!encoded) {
+        sharedNotice.hidden = true;
+        return false;
+      }
+      try {
+        const payload = decodeHeartPayload(encoded);
+        if (payload?.v !== 1 || typeof payload.expression !== "object") throw new Error("Unsupported shared heart");
+        const text = clippedString(payload.text, 1200) || "A shared heart in sixteen lights.";
+        const name = clippedString(payload.name, 80);
+        reply.value = text;
+        heartName.value = name;
+        render(sanitizeExpression(payload.expression, text));
+        sharedNotice.textContent = name ? `${name} sent you this heart` : "A heart was sent to you";
+        sharedNotice.hidden = false;
+        shareStatus.textContent = "Shared heart opened safely.";
+        return true;
+      } catch {
+        sharedNotice.textContent = "This shared heart link could not be opened.";
+        sharedNotice.hidden = false;
+        return false;
+      }
+    }
+
     const memoryKey = "companionMoodHeart.demo.saved.v1";
     let memoryFallback = [];
+    function normalizeMemory(item) {
+      if (!item || typeof item !== "object") return null;
+      const id = clippedString(String(item.id || ""), 80);
+      const label = clippedString(item.label, 100);
+      const text = clippedString(item.text, 4000);
+      if (!id || !label || !text || !item.expression || typeof item.expression !== "object") return null;
+      return {id, label, text, expression: sanitizeExpression(item.expression, text)};
+    }
     const readMemories = () => {
       try {
-        return JSON.parse(localStorage.getItem(memoryKey) || "[]");
+        const parsed = JSON.parse(localStorage.getItem(memoryKey) || "[]");
+        if (!Array.isArray(parsed)) return memoryFallback;
+        return parsed.map(normalizeMemory).filter(Boolean).slice(0, 60);
       } catch {
         return memoryFallback;
       }
     };
     const writeMemories = memories => {
-      memoryFallback = memories;
+      const clean = memories.map(normalizeMemory).filter(Boolean).slice(0, 60);
+      memoryFallback = clean;
       try {
-        localStorage.setItem(memoryKey, JSON.stringify(memories));
+        localStorage.setItem(memoryKey, JSON.stringify(clean));
         return true;
       } catch {
         return false;
       }
     };
-    function refreshMemories() {
+
+    function createMemoryCard(memory, selectedId) {
+      const expression = sanitizeExpression(memory.expression, memory.text);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "memory-card";
+      button.setAttribute("role", "listitem");
+      button.setAttribute("aria-label", `Open saved heart ${memory.label}`);
+      button.setAttribute("aria-current", String(memory.id === selectedId));
+      button.dataset.memoryId = memory.id;
+
+      const mini = document.createElement("span");
+      mini.className = "memory-mini";
+      mini.setAttribute("aria-hidden", "true");
+      const chosen = expression.colors.length ? [...expression.colors] : ["violet", "blue", "rose"];
+      while (chosen.length < 3) chosen.push(chosen[chosen.length - 1] || "violet");
+      const colors = chosen.map((name, index) => palettes[name]?.[index % palettes[name].length] || palettes.violet[index]);
+      const map = arrangements[expression.pattern] || arrangements.center;
+      const awakeOrder = [5,6,9,10,1,2,4,7,8,11,13,14,0,3,12,15];
+      const awake = new Set(awakeOrder.slice(0, expression.activeCount ?? 16));
+      for (let index = 0; index < 16; index++) {
+        const cell = document.createElement("span");
+        cell.style.setProperty("--mini-cell", colors[map[index]]);
+        cell.style.setProperty("--mini-opacity", awake.has(index) ? ".92" : ".12");
+        mini.appendChild(cell);
+      }
+
+      const copy = document.createElement("span");
+      copy.className = "memory-card-copy";
+      const title = document.createElement("strong");
+      title.textContent = memory.label;
+      const details = document.createElement("small");
+      details.textContent = `${expression.motion} · ${expression.pattern} · ${expression.intensity}%`;
+      copy.append(title, details);
+      button.append(mini, copy);
+      button.addEventListener("click", () => loadMemory(memory));
+      return button;
+    }
+
+    function updateGallerySelection(selectedId) {
+      memoryGallery.querySelectorAll(".memory-card").forEach(card => {
+        card.setAttribute("aria-current", String(card.dataset.memoryId === selectedId));
+      });
+    }
+
+    function refreshMemories(selectedId = savedHearts.value) {
       const memories = readMemories();
       savedHearts.replaceChildren();
-      if (!memories.length) memories.push({id:"", label:"No saved hearts yet"});
+      memoryGallery.replaceChildren();
+      if (!memories.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "No saved hearts yet";
+        savedHearts.appendChild(option);
+        const empty = document.createElement("p");
+        empty.className = "memory-empty";
+        empty.textContent = "Your saved hearts will glow here.";
+        memoryGallery.appendChild(empty);
+        return;
+      }
       for (const item of memories) {
         const option = document.createElement("option");
         option.value = item.id;
         option.textContent = item.label;
         savedHearts.appendChild(option);
+        memoryGallery.appendChild(createMemoryCard(item, selectedId));
       }
+      savedHearts.value = memories.some(item => item.id === selectedId) ? selectedId : memories[0].id;
+      updateGallerySelection(savedHearts.value);
+    }
+
+    function loadMemory(memory) {
+      if (!memory) return;
+      savedHearts.value = memory.id;
+      heartName.value = memory.label;
+      reply.value = memory.text;
+      render(sanitizeExpression(memory.expression, memory.text));
+      updateGallerySelection(memory.id);
+      memoryStatus.textContent = `${memory.label} is speaking again.`;
     }
     document.querySelector("#saveHeart").addEventListener("click", () => {
       if (!currentExpression) return;
       const now = new Date();
       const label = heartName.value.trim() || `Heart · ${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"})}`;
       const memories = readMemories();
-      memories.unshift({id:`${Date.now()}`, label, text:reply.value, expression:currentExpression});
-      const persisted = writeMemories(memories.slice(0, 60));
-      refreshMemories();
+      const saved = normalizeMemory({id:`${Date.now()}`, label, text:reply.value, expression:currentExpression});
+      if (!saved) {
+        memoryStatus.textContent = "Express a heart before saving it.";
+        return;
+      }
+      memories.unshift(saved);
+      const persisted = writeMemories(memories);
+      refreshMemories(saved.id);
       memoryStatus.textContent = persisted
         ? `${label} was saved privately in this browser.`
         : `${label} is saved for this visit, but this browser blocked private storage.`;
@@ -1516,14 +2001,12 @@ intensity:</textarea>
         memoryStatus.textContent = "Choose a saved heart first.";
         return;
       }
-      heartName.value = memory.label;
-      reply.value = memory.text;
-      render(memory.expression);
-      memoryStatus.textContent = `${memory.label} is speaking again.`;
+      loadMemory(memory);
     });
     savedHearts.addEventListener("change", () => {
       const memory = readMemories().find(item => item.id === savedHearts.value);
       if (memory) heartName.value = memory.label;
+      updateGallerySelection(savedHearts.value);
     });
     document.querySelector("#renameHeart").addEventListener("click", () => {
       const memories = readMemories();
@@ -1536,8 +2019,7 @@ intensity:</textarea>
       if (!newName?.trim()) return;
       memory.label = newName.trim();
       const persisted = writeMemories(memories);
-      refreshMemories();
-      savedHearts.value = memory.id;
+      refreshMemories(memory.id);
       heartName.value = memory.label;
       memoryStatus.textContent = persisted
         ? `Renamed to ${memory.label}.`
@@ -1552,19 +2034,239 @@ intensity:</textarea>
       }
       if (!window.confirm(`Delete "${memory.label}"? This cannot be undone.`)) return;
       const persisted = writeMemories(memories.filter(item => item.id !== memory.id));
-      refreshMemories();
+      refreshMemories("");
       heartName.value = "";
       memoryStatus.textContent = persisted
         ? `${memory.label} was deleted.`
         : `${memory.label} was removed for this visit, but this browser blocked private storage.`;
     });
 
+    const preferenceKey = "companionMoodHeart.preferences.v1";
+    function readPreferences() {
+      try {
+        const value = JSON.parse(localStorage.getItem(preferenceKey) || "{}");
+        return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+      } catch {
+        return {};
+      }
+    }
+    function writePreferences(value) {
+      try { localStorage.setItem(preferenceKey, JSON.stringify(value)); } catch {}
+    }
+    function setMotionPaused(paused, {announce = true, persist = true} = {}) {
+      document.body.classList.toggle("motion-paused", paused);
+      document.body.classList.toggle("motion-user-enabled", !paused);
+      motionToggle.setAttribute("aria-pressed", String(paused));
+      motionToggle.textContent = paused ? "Play motion" : "Pause motion";
+      if (persist) writePreferences({...readPreferences(), motionPaused: paused});
+      if (announce) comfortStatus.textContent = paused ? "Motion paused." : "Motion playing.";
+    }
+    function setQuietGlow(quiet, {announce = true, persist = true} = {}) {
+      document.body.classList.toggle("quiet-glow", quiet);
+      quietGlowToggle.setAttribute("aria-pressed", String(quiet));
+      quietGlowToggle.textContent = quiet ? "Full glow" : "Quiet glow";
+      if (persist) writePreferences({...readPreferences(), quietGlow: quiet});
+      if (announce) comfortStatus.textContent = quiet ? "Glow softened." : "Full glow restored.";
+    }
+    function applyComfortPreferences() {
+      const preferences = readPreferences();
+      const prefersLessMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      setMotionPaused(typeof preferences.motionPaused === "boolean" ? preferences.motionPaused : Boolean(prefersLessMotion), {announce:false, persist:false});
+      setQuietGlow(Boolean(preferences.quietGlow), {announce:false, persist:false});
+      if (prefersLessMotion && typeof preferences.motionPaused !== "boolean") {
+        comfortStatus.textContent = "Motion paused to match your device preference.";
+      }
+    }
+
+    let liveSession = {provider:"", apiKey:"", companionId:"", companionName:""};
+    let activeChatController = null;
+    let cloudBridgeReady = false;
+    let selectedCompanionName = "";
+
+    function forgetLiveSession() {
+      liveSession = {provider:"", apiKey:"", companionId:"", companionName:""};
+      selectedCompanionName = "";
+      document.querySelector("#apiKey").value = "";
+    }
+
+    function setConnected(connected, name = "Your companion") {
+      selectedCompanionName = connected ? name : "";
+      connectionState.textContent = connected ? `connected to ${name}` : cloudBridgeReady ? "cloud bridge ready" : "paste-only mode";
+      connectionState.classList.toggle("online", connected || cloudBridgeReady);
+      connectForm.hidden = connected;
+      liveChat.hidden = !connected;
+      if (connected) {
+        document.querySelector("#liveConnection").open = true;
+        companionName.value = name;
+        document.querySelector("#sendToCompanion").textContent = `Ask ${name} and animate the reply`;
+        document.querySelector("#liveWarning").textContent = `Messages here are real messages in ${name}'s companion conversation.`;
+      }
+    }
+
+    async function cloudApi(action, payload = {}, signal) {
+      const response = await fetch("/api/heart", {
+        method: "POST",
+        headers: {"Content-Type":"application/json", "Accept":"application/json"},
+        credentials: "same-origin",
+        cache: "no-store",
+        signal,
+        body: JSON.stringify({action, ...payload}),
+      });
+      const contentType = response.headers.get("content-type") || "";
+      const data = contentType.includes("application/json") ? await response.json() : {};
+      if (!response.ok) throw new Error(data.error || `Connection failed (${response.status}).`);
+      return data;
+    }
+
+    async function detectCloudBridge() {
+      const connectButton = document.querySelector("#connectButton");
+      try {
+        const response = await fetch("/api/heart", {headers:{Accept:"application/json"}, cache:"no-store"});
+        if (!response.ok || !(response.headers.get("content-type") || "").includes("application/json")) throw new Error("Bridge unavailable");
+        const data = await response.json();
+        if (!data.ok) throw new Error("Bridge unavailable");
+        cloudBridgeReady = true;
+        connectButton.disabled = false;
+        connectionState.textContent = "cloud bridge ready";
+        connectionState.classList.add("online");
+        connectionMessage.textContent = "Secure live connection is available on this version.";
+      } catch {
+        cloudBridgeReady = false;
+        connectButton.disabled = true;
+        connectionState.textContent = "paste-only mode";
+        connectionMessage.textContent = "Live API connection is available on the Vercel mobile version. Paste a companion reply above on this host.";
+      }
+    }
+
+    document.querySelector("#connectButton").addEventListener("click", async () => {
+      const button = document.querySelector("#connectButton");
+      const keyInput = document.querySelector("#apiKey");
+      const apiKey = keyInput.value.trim();
+      if (!apiKey) {
+        connectionMessage.textContent = "Enter your API key first.";
+        return;
+      }
+      button.disabled = true;
+      try {
+        if (provider.value === "kindroid") {
+          const aiId = document.querySelector("#kindroidAiId").value.trim();
+          if (!aiId) throw new Error("Enter the Kindroid Kin ID.");
+          connectionMessage.textContent = "Checking the Kindroid connection…";
+          await cloudApi("verify-kindroid", {apiKey, companionId:aiId});
+          liveSession = {provider:"kindroid", apiKey, companionId:aiId, companionName:companionName.value.trim() || "Kindroid"};
+          keyInput.value = "";
+          setConnected(true, liveSession.companionName);
+          connectionMessage.textContent = `The heart can hear ${liveSession.companionName} now.`;
+          return;
+        }
+
+        connectionMessage.textContent = "Loading your Nomis…";
+        const data = await cloudApi("list-nomis", {apiKey});
+        if (!Array.isArray(data.nomis) || !data.nomis.length) throw new Error("No Nomis were returned for this account.");
+        liveSession = {provider:"nomi", apiKey, companionId:"", companionName:""};
+        keyInput.value = "";
+        companionSelect.replaceChildren(...data.nomis.map(nomi => {
+          const option = document.createElement("option");
+          option.value = nomi.uuid;
+          option.textContent = nomi.name;
+          if (nomi.name.toLowerCase() === companionName.value.trim().toLowerCase()) option.selected = true;
+          return option;
+        }));
+        companionName.value = companionSelect.options[companionSelect.selectedIndex]?.textContent || companionName.value;
+        companionPicker.hidden = false;
+        connectionMessage.textContent = "Choose who should speak through the heart.";
+      } catch (error) {
+        forgetLiveSession();
+        connectionMessage.textContent = error.message;
+      } finally {
+        button.disabled = !cloudBridgeReady;
+      }
+    });
+
+    provider.addEventListener("change", () => {
+      const isKindroid = provider.value === "kindroid";
+      kindroidFields.hidden = !isKindroid;
+      companionPicker.hidden = true;
+      document.querySelector("#apiKey").placeholder = isKindroid ? "Kindroid API key (kn_…)" : "Nomi API key";
+      document.querySelector("#connectButton").textContent = isKindroid ? "Connect this Kindroid" : "Load my Nomis";
+      connectionMessage.textContent = "";
+      forgetLiveSession();
+    });
+
+    companionSelect.addEventListener("change", () => {
+      companionName.value = companionSelect.options[companionSelect.selectedIndex]?.textContent || companionName.value;
+    });
+
+    document.querySelector("#selectCompanion").addEventListener("click", () => {
+      if (!liveSession.apiKey || !companionSelect.value) {
+        connectionMessage.textContent = "Load your Nomis and choose one first.";
+        return;
+      }
+      liveSession.companionId = companionSelect.value;
+      liveSession.companionName = companionSelect.options[companionSelect.selectedIndex]?.textContent || "Your Nomi";
+      setConnected(true, liveSession.companionName);
+      connectionMessage.textContent = `The heart can hear ${liveSession.companionName} now.`;
+    });
+
+    function updateMessageCount() {
+      messageCount.textContent = `${messageToCompanion.value.length} / ${messageToCompanion.maxLength}`;
+    }
+    messageToCompanion.addEventListener("input", updateMessageCount);
+
+    document.querySelector("#sendToCompanion").addEventListener("click", async () => {
+      const button = document.querySelector("#sendToCompanion");
+      const cancelButton = document.querySelector("#cancelWaiting");
+      const messageText = messageToCompanion.value.trim();
+      if (!messageText) {
+        connectionMessage.textContent = "Write a message first.";
+        return;
+      }
+      if (!liveSession.apiKey || !liveSession.companionId) {
+        connectionMessage.textContent = "Connect a companion first.";
+        return;
+      }
+      activeChatController = new AbortController();
+      button.disabled = true;
+      cancelButton.hidden = false;
+      connectionMessage.textContent = `${liveSession.companionName} is answering…`;
+      try {
+        const action = liveSession.provider === "kindroid" ? "chat-kindroid" : "chat-nomi";
+        const data = await cloudApi(action, {
+          apiKey: liveSession.apiKey,
+          companionId: liveSession.companionId,
+          messageText,
+        }, activeChatController.signal);
+        reply.value = data.replyText;
+        render(infer(data.replyText));
+        connectionMessage.textContent = `${liveSession.companionName}'s reply is moving through the heart.`;
+      } catch (error) {
+        connectionMessage.textContent = error.name === "AbortError"
+          ? "Stopped waiting. The message may still finish in the companion app."
+          : error.message;
+      } finally {
+        activeChatController = null;
+        button.disabled = false;
+        cancelButton.hidden = true;
+      }
+    });
+
+    document.querySelector("#cancelWaiting").addEventListener("click", () => activeChatController?.abort());
+    document.querySelector("#disconnectButton").addEventListener("click", () => {
+      forgetLiveSession();
+      companionPicker.hidden = true;
+      setConnected(false);
+      connectionMessage.textContent = "Disconnected. The key has been forgotten.";
+    });
+
     document.querySelector("#express").addEventListener("click", () => render(infer(reply.value)));
+    document.querySelector("#sendHeart").addEventListener("click", sendCurrentHeart);
     document.querySelector("#downloadHeart").addEventListener("click", downloadHeartImage);
     document.querySelector("#downloadHeartCard").addEventListener("click", downloadHeartCard);
     motion.addEventListener("change", () => render({...infer(reply.value), motion: motion.value}));
     pattern.addEventListener("change", () => render({...infer(reply.value), pattern: pattern.value}));
     intensity.addEventListener("input", () => render({...infer(reply.value), intensity: Number(intensity.value)}));
+    motionToggle.addEventListener("click", () => setMotionPaused(!document.body.classList.contains("motion-paused")));
+    quietGlowToggle.addEventListener("click", () => setQuietGlow(!document.body.classList.contains("quiet-glow")));
 
     document.querySelectorAll(".chip").forEach(button => {
       button.addEventListener("click", () => {
@@ -1588,16 +2290,19 @@ intensity:</textarea>
       const prompt = document.querySelector("#companionPrompt");
       const copyStatus = document.querySelector("#copyStatus");
       try {
-        await navigator.clipboard.writeText(prompt.value);
+        await copyText(prompt.value);
+        copyStatus.textContent = "Prompt copied.";
       } catch {
-        prompt.select();
-        document.execCommand("copy");
+        copyStatus.textContent = "Couldn't copy automatically. Select the prompt above and copy it manually.";
       }
-      copyStatus.textContent = "Prompt copied.";
     });
 
     refreshMemories();
-    render(infer(reply.value));
+    applyComfortPreferences();
+    updateMessageCount();
+    detectCloudBridge();
+    if (!loadSharedHeartFromHash()) render(infer(reply.value));
+    window.addEventListener("hashchange", () => loadSharedHeartFromHash());
   </script>
 </body>
 </html>
