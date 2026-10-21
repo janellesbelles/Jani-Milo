@@ -1,8 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {handleHeartAction} from "../api/heart.js";
+import {handleHeartAction, PROVIDER_TIMEOUT_MS} from "../api/heart.js";
 
 const nomiId = "7c38494b-ea1a-407e-99e8-72c7ede65931";
+
+test("allows providers at least two minutes to answer", () => {
+  assert.ok(PROVIDER_TIMEOUT_MS >= 120_000);
+});
 
 test("lists only safe Nomi fields", async () => {
   const calls = [];

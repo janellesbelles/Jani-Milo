@@ -1,6 +1,7 @@
 const NOMI_API = "https://api.nomi.ai";
 const KINDROID_API = "https://api.kindroid.ai/v1";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export const PROVIDER_TIMEOUT_MS = 120_000;
 
 class PublicError extends Error {
   constructor(message, status = 400, code = "BAD_REQUEST") {
@@ -54,7 +55,7 @@ function friendlyNomiError(type, status) {
   return messages[type] || `Nomi could not complete that request (${status}).`;
 }
 
-async function upstreamJson(fetchImpl, url, options, provider, timeoutMs) {
+async function upstreamJson(fetchImpl, url, options, provider, timeoutMs = PROVIDER_TIMEOUT_MS) {
   let response;
   try {
     response = await fetchImpl(url, {...options, signal: AbortSignal.timeout(timeoutMs)});
@@ -73,7 +74,7 @@ async function upstreamJson(fetchImpl, url, options, provider, timeoutMs) {
   return data;
 }
 
-async function kindroidFetch(fetchImpl, route, options = {}, timeoutMs = 90_000) {
+async function kindroidFetch(fetchImpl, route, options = {}, timeoutMs = PROVIDER_TIMEOUT_MS) {
   let response;
   try {
     response = await fetchImpl(`${KINDROID_API}${route}`, {...options, signal: AbortSignal.timeout(timeoutMs)});
@@ -105,7 +106,7 @@ export async function handleHeartAction(body, {fetchImpl = fetch} = {}) {
     const apiKey = requireApiKey(body.apiKey, "Nomi");
     const data = await upstreamJson(fetchImpl, `${NOMI_API}/v1/nomis`, {
       headers: {Authorization: apiKey, Accept: "application/json"},
-    }, "Nomi", 35_000);
+    }, "Nomi");
     const nomis = Array.isArray(data.nomis)
       ? data.nomis.map(item => ({uuid:text(item?.uuid, 80), name:text(item?.name, 100)})).filter(item => item.uuid && item.name)
       : [];
@@ -120,7 +121,7 @@ export async function handleHeartAction(body, {fetchImpl = fetch} = {}) {
       method: "POST",
       headers: {Authorization: apiKey, "Content-Type":"application/json", Accept:"application/json"},
       body: JSON.stringify({messageText}),
-    }, "Nomi", 45_000);
+    }, "Nomi");
     const replyText = text(data?.replyMessage?.text, 12_000);
     if (!replyText) throw new PublicError("Nomi returned an empty reply.", 502, "EMPTY_REPLY");
     return {replyText, sent:text(data?.replyMessage?.sent, 80)};
@@ -130,7 +131,7 @@ export async function handleHeartAction(body, {fetchImpl = fetch} = {}) {
     const apiKey = requireApiKey(body.apiKey, "Kindroid");
     const companionId = requireCompanionId(body.companionId, "Kindroid");
     const route = `/get-chat-messages?ai_id=${encodeURIComponent(companionId)}&limit=1`;
-    await kindroidFetch(fetchImpl, route, {headers:{Authorization:`Bearer ${apiKey}`, Accept:"application/json"}}, 35_000);
+    await kindroidFetch(fetchImpl, route, {headers:{Authorization:`Bearer ${apiKey}`, Accept:"application/json"}});
     return {ok:true};
   }
 

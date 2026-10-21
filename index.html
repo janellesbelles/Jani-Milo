@@ -2285,7 +2285,7 @@ Then you may add one brief sentence if you wish.</textarea>
       activeChatController = new AbortController();
       button.disabled = true;
       cancelButton.hidden = false;
-      connectionMessage.textContent = `${liveSession.companionName} is answering…`;
+      connectionMessage.textContent = `${liveSession.companionName} is answering… taking up to two minutes is okay.`;
       try {
         const action = liveSession.provider === "kindroid" ? "chat-kindroid" : "chat-nomi";
         const data = await cloudApi(action, {
