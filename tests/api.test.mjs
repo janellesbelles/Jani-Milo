@@ -4,8 +4,9 @@ import {handleHeartAction, PROVIDER_TIMEOUT_MS} from "../api/heart.js";
 
 const nomiId = "7c38494b-ea1a-407e-99e8-72c7ede65931";
 
-test("allows providers at least two minutes to answer", () => {
-  assert.ok(PROVIDER_TIMEOUT_MS >= 120_000);
+test("allows providers nearly the full five-minute function window", () => {
+  assert.ok(PROVIDER_TIMEOUT_MS >= 280_000);
+  assert.ok(PROVIDER_TIMEOUT_MS < 300_000);
 });
 
 test("lists only safe Nomi fields", async () => {

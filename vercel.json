@@ -3,7 +3,7 @@
   "cleanUrls": true,
   "functions": {
     "api/heart.js": {
-      "maxDuration": 150,
+      "maxDuration": 300,
       "supportsCancellation": true
     }
   },

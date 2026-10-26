@@ -1,7 +1,9 @@
 const NOMI_API = "https://api.nomi.ai";
 const KINDROID_API = "https://api.kindroid.ai/v1";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-export const PROVIDER_TIMEOUT_MS = 120_000;
+// Hobby Functions may run for five minutes. Keep a small response margin so
+// the bridge can still return a reply or a useful error before Vercel stops it.
+export const PROVIDER_TIMEOUT_MS = 285_000;
 
 class PublicError extends Error {
   constructor(message, status = 400, code = "BAD_REQUEST") {
