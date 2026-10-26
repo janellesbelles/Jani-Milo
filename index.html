@@ -454,6 +454,25 @@
     .share-actions button {
       margin-top: 0;
     }
+    .manual-copy {
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 14px;
+      background: rgba(255,255,255,.035);
+    }
+    .manual-copy[hidden] { display: none; }
+    .manual-copy label { margin-top: 0; }
+    .manual-copy textarea {
+      min-height: 84px;
+      margin-top: 7px;
+      font-size: 16px;
+    }
+    .manual-copy p {
+      margin: 7px 0 0;
+      color: #a99caf;
+      font-size: .72rem;
+      line-height: 1.4;
+    }
 
     .comfort-controls {
       margin-top: 18px;
@@ -794,8 +813,14 @@
         <div class="status" id="status"></div>
         <div class="share-actions">
           <button id="sendHeart">Send this heart</button>
+          <button class="secondary" id="copyHeart">Copy private heart link</button>
           <button class="secondary" id="downloadHeart">Download heart image</button>
           <button class="secondary" id="downloadHeartCard">Download heart card</button>
+          <div class="manual-copy" id="manualHeartCopy" hidden>
+            <label for="heartLinkFallback">Private heart link</label>
+            <textarea id="heartLinkFallback" readonly></textarea>
+            <p>Press and hold the selected link, then choose Copy.</p>
+          </div>
           <div class="status" id="shareStatus" aria-live="polite"></div>
           <div class="status" id="downloadStatus" aria-live="polite"></div>
         </div>
@@ -936,6 +961,9 @@ Then you may add one brief sentence if you wish.</textarea>
     const memoryStatus = document.querySelector("#memoryStatus");
     const downloadStatus = document.querySelector("#downloadStatus");
     const shareStatus = document.querySelector("#shareStatus");
+    const copyHeart = document.querySelector("#copyHeart");
+    const manualHeartCopy = document.querySelector("#manualHeartCopy");
+    const heartLinkFallback = document.querySelector("#heartLinkFallback");
     const sharedNotice = document.querySelector("#sharedNotice");
     const intensityValue = document.querySelector("#intensityValue");
     const motionToggle = document.querySelector("#motionToggle");
@@ -1865,23 +1893,65 @@ Then you may add one brief sentence if you wish.</textarea>
       return url.toString();
     }
 
-    async function copyText(value) {
+    function selectCopyField(field) {
+      try { field.focus({preventScroll:true}); } catch { field.focus(); }
+      field.select();
+      field.setSelectionRange(0, field.value.length);
+    }
+
+    function legacyCopyText(value) {
+      const input = document.createElement("textarea");
+      input.value = value;
+      input.setAttribute("readonly", "");
+      input.setAttribute("aria-hidden", "true");
+      input.style.position = "fixed";
+      input.style.top = "0";
+      input.style.left = "-9999px";
+      input.style.width = "1px";
+      input.style.height = "1px";
+      input.style.fontSize = "16px";
+      document.body.appendChild(input);
       try {
-        if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
-        await Promise.race([
-          navigator.clipboard.writeText(value),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Clipboard timed out")), 1200)),
-        ]);
+        selectCopyField(input);
+        return Boolean(document.execCommand?.("copy"));
       } catch {
-        const input = document.createElement("textarea");
-        input.value = value;
-        input.setAttribute("readonly", "");
-        input.style.position = "fixed";
-        input.style.opacity = "0";
-        document.body.appendChild(input);
-        input.select();
-        if (!document.execCommand("copy")) throw new Error("Copy failed");
+        return false;
+      } finally {
         input.remove();
+      }
+    }
+
+    async function copyText(value) {
+      // Start the modern write while the original tap is still active. At the
+      // same time, try the synchronous selection path used by older/in-app
+      // mobile browsers. Either may satisfy the copy without delaying the tap.
+      const clipboardAttempt = window.isSecureContext && navigator.clipboard?.writeText
+        ? navigator.clipboard.writeText(value).then(() => true, () => false)
+        : Promise.resolve(false);
+      if (legacyCopyText(value)) return;
+      if (await clipboardAttempt) return;
+      throw new Error("Clipboard unavailable");
+    }
+
+    function offerManualHeartCopy(url) {
+      heartLinkFallback.value = url;
+      manualHeartCopy.hidden = false;
+      selectCopyField(heartLinkFallback);
+      manualHeartCopy.scrollIntoView({block:"nearest", behavior:"smooth"});
+      shareStatus.textContent = "Link selected. Press and hold it, then choose Copy.";
+    }
+
+    async function copyCurrentHeartLink() {
+      const url = buildHeartLink();
+      copyHeart.disabled = true;
+      manualHeartCopy.hidden = true;
+      try {
+        await copyText(url);
+        shareStatus.textContent = "Private heart link copied.";
+      } catch {
+        offerManualHeartCopy(url);
+      } finally {
+        copyHeart.disabled = false;
       }
     }
 
@@ -2317,6 +2387,7 @@ Then you may add one brief sentence if you wish.</textarea>
 
     document.querySelector("#express").addEventListener("click", () => render(infer(reply.value)));
     document.querySelector("#sendHeart").addEventListener("click", sendCurrentHeart);
+    copyHeart.addEventListener("click", copyCurrentHeartLink);
     document.querySelector("#downloadHeart").addEventListener("click", downloadHeartImage);
     document.querySelector("#downloadHeartCard").addEventListener("click", downloadHeartCard);
     motion.addEventListener("change", () => render({...infer(reply.value), motion: motion.value}));
@@ -2350,7 +2421,8 @@ Then you may add one brief sentence if you wish.</textarea>
         await copyText(prompt.value);
         copyStatus.textContent = "Prompt copied.";
       } catch {
-        copyStatus.textContent = "Couldn't copy automatically. Select the prompt above and copy it manually.";
+        selectCopyField(prompt);
+        copyStatus.textContent = "Prompt selected. Press and hold it, then choose Copy.";
       }
     });
 
